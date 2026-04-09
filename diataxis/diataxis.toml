@@ -1,0 +1,244 @@
+[project]
+name = "pbook"
+description = "Knowledge playbook service for LLM-assisted workflows"
+type = "project-docs"
+audience = "Engineers integrating pbook into their projects or operating it as a service"
+prerequisites = "Python, Temporal basics, Pydantic, SQLAlchemy, CLI tools"
+
+[topics.getting-started]
+title = "Getting Started"
+description = "First-time setup and basic usage of pbook"
+complexity = "beginner"
+order = 1
+
+[topics.getting-started.tutorials]
+file = "tutorials/getting-started.md"
+status = "draft"
+covers = [
+    "Starting the pbook worker",
+    "Adding a curated entry via CLI",
+    "Listing and retrieving entries",
+    "Pushing experience data for extraction",
+    "Reviewing and approving extracted entries",
+]
+detail = """Walk through the full lifecycle: worker startup, add an entry, \
+query it back, push experience, review results. Use real CLI commands with \
+concrete example JSON files. Show output at every step."""
+guidance = """Use first-person plural. Concrete, not abstract. One path — \
+no alternatives or options. The reader should have a working pbook with \
+entries in it by the end. Link to explanation/quality-bar.md for why the \
+quality constraints exist."""
+
+[topics.entries]
+title = "Managing Entries"
+description = "Adding, updating, reviewing, and removing playbook entries"
+complexity = "beginner"
+order = 2
+
+[topics.entries.howto]
+file = "howto/manage-entries.md"
+status = "draft"
+covers = [
+    "How to add a curated advice entry",
+    "How to check for duplicates before adding",
+    "How to update an existing entry",
+    "How to review and approve extracted entries",
+    "How to reject a low-quality entry",
+]
+detail = "Task-focused, no teaching. Assume the reader has completed the tutorial."
+guidance = """Each task is a separate headed section. Include the CLI command \
+and a minimal JSON example. Link to reference/cli.md for full option lists. \
+Link to reference/data-model.md for field details."""
+
+[topics.retrieval]
+title = "Retrieval and Ranking"
+description = "Querying entries by tag with intent-based ranking"
+complexity = "intermediate"
+order = 3
+prerequisites = ["entries"]
+
+[topics.retrieval.howto]
+file = "howto/retrieve-entries.md"
+status = "draft"
+covers = [
+    "How to query entries by tag via CLI",
+    "How to retrieve entries via Temporal workflow",
+    "How to use create vs fix mode",
+    "How to control the token budget",
+    "How to exclude unreviewed entries",
+]
+detail = "Show both CLI and Temporal workflow examples. Emphasize mode selection."
+guidance = """Include Python code for Temporal workflow calls. Show the \
+RetrievalInput model fields. Link to explanation/retrieval-ranking.md for \
+how scoring works."""
+
+[topics.retrieval.explanation]
+file = "explanation/retrieval-ranking.md"
+status = "draft"
+covers = [
+    "Why retrieval has two modes (create vs fix)",
+    "How tag overlap scoring works",
+    "How mode-based weighting affects ranking",
+    "How token budget packing works",
+    "Why entries are ranked, not just filtered",
+]
+detail = "Discursive. Connect the ranking design to the problem it solves."
+guidance = """Explain the intuition: when writing new code you want best \
+practices; when debugging you want project-specific gotchas. The scoring \
+algorithm is a means to this end, not the point. Link to \
+reference/data-model.md for tag namespace details."""
+
+[topics.extraction]
+title = "Experience Extraction"
+description = "Pushing experience data and the LLM extraction pipeline"
+complexity = "intermediate"
+order = 4
+prerequisites = ["entries"]
+
+[topics.extraction.howto]
+file = "howto/push-experience.md"
+status = "draft"
+covers = [
+    "How to push experience data via CLI",
+    "How to push experience via Temporal workflow",
+    "How to structure the PushExperienceInput",
+]
+detail = "Show both CLI and Temporal examples with real JSON."
+guidance = """Emphasize what makes good push data: specific problem, specific \
+resolution, relevant context. Link to explanation/quality-bar.md for why \
+generic experience gets filtered out."""
+
+[topics.extraction.explanation]
+file = "explanation/quality-bar.md"
+status = "draft"
+covers = [
+    "Why the quality bar exists",
+    "What 'unexpected + actionable' means in practice",
+    "Why generic advice is excluded",
+    "How the extraction prompt enforces quality",
+    "The optimistic review model (needs-review tag)",
+]
+detail = "Discursive. This is the most important concept in pbook."
+guidance = """Center on the core principle: better to miss than mislead. \
+Connect to real examples — 'always use type hints' is too generic, but \
+'Mistral OCR returns base64 with a data URI prefix' is specific and \
+unexpected. Link to reference/workflows.md for the extraction prompt."""
+
+[topics.tags]
+title = "Tag System"
+description = "Namespaced tags and their role in retrieval"
+complexity = "beginner"
+order = 5
+
+[topics.tags.reference]
+file = "reference/tags.md"
+status = "draft"
+covers = [
+    "All five tag namespaces with valid values",
+    "General vs extracted tier distinction",
+    "Tag validation rules",
+    "Tag inference from file extensions and keywords",
+]
+detail = "Tabular. One table per namespace with valid values and sources."
+guidance = """Use tables consistently. Show the extension-to-language and \
+keyword-to-domain mappings. Link to explanation/retrieval-ranking.md for \
+how tags affect ranking."""
+
+[topics.data-model]
+title = "Data Model"
+description = "Entry types, Pydantic models, and database schema"
+complexity = "intermediate"
+order = 6
+
+[topics.data-model.reference]
+file = "reference/data-model.md"
+status = "draft"
+covers = [
+    "PlaybookEntry model with all fields and defaults",
+    "ApiDocRecord model",
+    "PushExperienceInput model",
+    "RetrievalInput and RetrievalResult models",
+    "EntryType enum values",
+    "Database schema (entries table)",
+]
+detail = "Tabular. Field name, type, default, description for each model."
+guidance = """Mirror the Pydantic model structure. Use tables for fields. \
+Include short illustrative examples (1-3 lines JSON) for each entry type. \
+Link to howto/manage-entries.md for usage."""
+
+[topics.cli]
+title = "CLI"
+description = "All pbook commands and their options"
+complexity = "beginner"
+order = 7
+
+[topics.cli.reference]
+file = "reference/cli.md"
+status = "draft"
+covers = [
+    "All 12 pbook commands with synopsis",
+    "Options, arguments, and defaults for each command",
+    "Exit codes and error handling",
+]
+detail = "One section per command. Synopsis, options table, example."
+guidance = """Use consistent formatting: synopsis, then options table, then \
+brief example. Link to howto/manage-entries.md and howto/retrieve-entries.md \
+for task-oriented guidance."""
+
+[topics.workflows]
+title = "Temporal Workflows"
+description = "Workflow definitions, activities, and integration"
+complexity = "advanced"
+order = 8
+prerequisites = ["retrieval", "extraction"]
+
+[topics.workflows.reference]
+file = "reference/workflows.md"
+status = "draft"
+covers = [
+    "RetrievalWorkflow input/output and steps",
+    "ExtractionWorkflow input/output and steps",
+    "ManualEntryWorkflow input/output and steps",
+    "ExportWorkflow input/output and steps",
+    "All activities with their parameters and timeouts",
+    "Task queue name",
+]
+detail = "Step-by-step for each workflow. Activity table with timeouts."
+guidance = """Use consistent formatting per workflow: input model, output \
+model, numbered steps with timeout. Activity summary table at the end. \
+Link to howto/retrieve-entries.md and howto/push-experience.md for usage."""
+
+[topics.workflows.howto]
+file = "howto/temporal-integration.md"
+status = "draft"
+covers = [
+    "How to call pbook workflows from another Temporal worker",
+    "How to set up cross-queue workflow execution",
+    "How to use pbook as a Python library without Temporal",
+]
+detail = "Python code examples for each integration path."
+guidance = """Show complete, runnable code. Include imports. Cover both \
+Temporal and direct library usage. Link to reference/workflows.md for \
+workflow details."""
+
+[topics.architecture]
+title = "Architecture"
+description = "Design principles and system structure"
+complexity = "intermediate"
+order = 9
+
+[topics.architecture.explanation]
+file = "explanation/architecture.md"
+status = "draft"
+covers = [
+    "Why pbook has its own database and worker",
+    "Why tags are namespaced with a controlled vocabulary",
+    "The two ingestion paths and when to use each",
+    "Function Core / Imperative Shell pattern",
+    "How sax-llm provides LLM access",
+]
+detail = "Discursive. Connect design decisions to the problems they solve."
+guidance = """Focus on rationale, not implementation. Defer sax-llm internals \
+to that project's documentation — just explain that pbook uses it for LLM \
+calls and how the provider is registered. Link to reference/data-model.md \
+for specifics."""
