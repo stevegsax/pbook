@@ -1,9 +1,18 @@
 # Explanation
 
-Explanations discuss the reasoning behind pbook's design. They answer "why" rather than "how" and connect decisions to the problems they solve.
+Background, context, and deeper understanding.
 
-- [Understanding the Quality Bar](quality-bar.md) -- Why entries must be minimal and accurate
+## Retrieval and Ranking
 
-- [How Retrieval Ranking Works](retrieval-ranking.md) -- How create and fix modes affect ranking
+[Retrieval and Ranking](retrieval-ranking.html)
+: Why retrieval has two modes (create vs fix), How tag overlap scoring works, How mode-based weighting affects ranking, ...
 
-- [Architecture and Design](architecture.md) -- Design principles and system structure
+## Experience Extraction
+
+[Experience Extraction](quality-bar.html)
+: Why the quality bar exists, What 'unexpected + actionable' means in practice, Why generic advice is excluded, ...
+
+## Architecture
+
+[Architecture](architecture.html)
+: Why pbook has its own database and worker, Why tags are namespaced with a controlled vocabulary, The two ingestion paths and when to use each, ...

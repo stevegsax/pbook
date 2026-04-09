@@ -1,11 +1,23 @@
 # How-to Guides
 
-Task-oriented guides for common pbook operations. Each guide assumes you have completed the [Getting Started tutorial](../tutorials/getting-started.md).
+Practical directions for accomplishing specific tasks.
 
-- [Managing Entries](manage-entries.md) -- Adding, updating, reviewing, and removing entries
+## Managing Entries
 
-- [Retrieving Entries](retrieve-entries.md) -- Querying entries with tags and ranking modes
+[Managing Entries](manage-entries.html)
+: How to add a curated advice entry, How to check for duplicates before adding, How to update an existing entry, ...
 
-- [Pushing Experience Data](push-experience.md) -- Pushing experience data for LLM extraction
+## Retrieval and Ranking
 
-- [Temporal Integration](temporal-integration.md) -- Calling pbook from another Temporal worker
+[Retrieval and Ranking](retrieve-entries.html)
+: How to query entries by tag via CLI, How to retrieve entries via Temporal workflow, How to use create vs fix mode, ...
+
+## Experience Extraction
+
+[Experience Extraction](push-experience.html)
+: How to push experience data via CLI, How to push experience via Temporal workflow, How to structure the PushExperienceInput
+
+## Temporal Workflows
+
+[Temporal Workflows](temporal-integration.html)
+: How to call pbook workflows from another Temporal worker, How to set up cross-queue workflow execution, How to use pbook as a Python library without Temporal

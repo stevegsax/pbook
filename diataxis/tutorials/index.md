@@ -1,5 +1,8 @@
 # Tutorials
 
-Tutorials walk through pbook from first principles. Each tutorial follows a single path from start to finish with concrete, working examples.
+Learn by doing — guided lessons that take you through a topic step by step.
 
-- [Getting Started](getting-started.md) -- Set up pbook, add entries, push experience data through the extraction pipeline, and review the results
+## Getting Started
+
+[Getting Started](getting-started.html)
+: Starting the pbook worker, Adding a curated entry via CLI, Listing and retrieving entries, ...
