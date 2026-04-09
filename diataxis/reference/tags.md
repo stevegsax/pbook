@@ -67,4 +67,6 @@ Tags must conform to `namespace:value` format. The following constraints apply:
 | `is_extracted_tag()`        | `is_extracted_tag(tag: str) -> bool`                             | `True` if the tag belongs to `project:` or `pattern:` |
 | `infer_tags_from_context()` | `infer_tags_from_context(file_extensions, description) -> list[str]` | Sorted, deduplicated list of inferred tags |
 
-All functions are defined in `pbook.tags`. All are pure functions with no side effects.
+All functions are defined in `pbook.tags`.
+
+For how tags affect retrieval ranking, see [Retrieval Ranking](../explanation/retrieval-ranking.md). For practical tag usage in queries, see [How to Retrieve Entries](../howto/retrieve-entries.md).

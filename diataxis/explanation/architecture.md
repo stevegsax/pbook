@@ -20,6 +20,14 @@ A client workflow calls pbook by executing a child workflow on `pbook-task-queue
 
 This also means pbook's activity registrations do not pollute client workers. The pbook worker registers eight activities (fetch, save, extract, review, validate, export). A client worker does not need to know about any of them -- it only needs to know the workflow names and input models.
 
+## Why a controlled tag vocabulary
+
+Tags determine which entries surface during retrieval. A freeform tag system would require fuzzy matching to equate "py" with "python" or "testing" with "test" -- adding complexity and reducing reliability. Controlled namespaces with predefined value mappings eliminate this ambiguity entirely.
+
+The two-tier design (general vs extracted) reflects different creation patterns. General tags like `lang:python` and `lib:sqlalchemy` are attached to curated advice that applies across projects. Extracted tags like `project:forge` and `pattern:failure-pattern` are attached to pitfalls specific to one codebase. The retrieval ranking system uses this tier distinction to weight results based on intent -- general knowledge for creation, project-specific knowledge for debugging.
+
+See [Tag System Reference](../reference/tags.md) for namespace definitions. See [Retrieval Ranking](retrieval-ranking.md) for how tags affect scoring.
+
 ## Two ingestion paths
 
 Entries enter the playbook through two paths, each designed for a different source of knowledge.

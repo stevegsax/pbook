@@ -1,7 +1,5 @@
 # How to Integrate pbook with a Temporal Workflow
 
-This guide shows how to call pbook from another Temporal worker and how to use pbook as a Python library without Temporal.
-
 ## How to call pbook workflows from another Temporal worker
 
 Execute workflows on `pbook-task-queue` using cross-queue invocation. The pbook worker must be running.

@@ -109,7 +109,7 @@ Output:
 Extraction complete: 1 entries created.
 ```
 
-The extraction workflow sent the experience to an LLM, which distilled it into a structured playbook entry. Extracted entries are flagged for review before they become part of the active knowledge base.
+You should see that one entry was created from the experience data. Extracted entries are flagged for review before they become part of the active knowledge base.
 
 ## Review extracted entries
 

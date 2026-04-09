@@ -108,29 +108,6 @@ The quality of extracted entries depends on the quality of the input. `PushExper
 | `context` | no | Relevant context (code, errors, stack traces) |
 | `metadata` | no | Arbitrary key-value pairs (library versions, environment details) |
 
-Good input is specific and actionable. Bad input is vague or generic.
+Structure your input with a specific problem, specific resolution, and relevant context. Vague descriptions like "code didn't work" produce no useful extraction.
 
-**Good:**
-
-```json
-{
-    "project": "forge",
-    "problem": "InMemorySpanExporter import fails with 'cannot import name' from opentelemetry.sdk.trace.export.in_memory.",
-    "resolution": "The correct module path is opentelemetry.sdk.trace.export.in_memory_span_exporter, not .in_memory.",
-    "context": "opentelemetry-sdk 1.20+. The module was renamed in a prior release."
-}
-```
-
-**Bad:**
-
-```json
-{
-    "project": "forge",
-    "problem": "Import didn't work.",
-    "resolution": "Fixed the import."
-}
-```
-
-The bad example lacks the specific import path, the correct fix, and any context the extraction LLM needs to produce a useful entry. The extraction LLM may still create an entry from vague input, but it will be low quality and likely rejected during review.
-
-See [quality bar](../explanation/quality-bar.md) for what makes a good playbook entry. See [data model reference](../reference/data-model.md) for the full `PushExperienceInput` schema.
+For detailed guidance on what makes good experience data, see [Understanding the Quality Bar](../explanation/quality-bar.md). See [data model reference](../reference/data-model.md) for the full `PushExperienceInput` schema.

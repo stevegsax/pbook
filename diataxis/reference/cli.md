@@ -38,6 +38,8 @@ pbook list [--tag TAG]... [--type TYPE] [--project PROJECT] [--limit N] [--json]
 pbook list --tag lang:python --tag domain:testing --limit 5
 ```
 
+For querying strategies, see [How to Retrieve Entries](../howto/retrieve-entries.md).
+
 ## pbook get
 
 Get a single entry by ID.
@@ -71,6 +73,8 @@ pbook add --file FILE [--schema]
 ```
 pbook add --file entry.json
 ```
+
+For workflow context, see [How to Manage Entries](../howto/manage-entries.md).
 
 ## pbook update
 
@@ -155,6 +159,8 @@ pbook push --file FILE [--temporal-address ADDR]
 pbook push --file experience.json
 ```
 
+For experience data guidelines, see [How to Push Experience](../howto/push-experience.md).
+
 ## pbook review
 
 List entries needing review.
@@ -200,3 +206,13 @@ pbook skill-prompt [--operation OP]
 ```
 pbook skill-prompt --operation add
 ```
+
+## Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success |
+| 1 | Error (invalid input, entry not found, store disabled, validation failure) |
+| 2 | Usage error (missing required options, unknown command) |
+
+Error messages are written to stderr. Normal output goes to stdout.

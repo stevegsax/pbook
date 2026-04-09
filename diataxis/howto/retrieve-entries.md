@@ -61,12 +61,7 @@ See [workflow reference](../reference/workflows.md) for the full `RetrievalWorkf
 
 ## How to use create vs fix mode
 
-The `mode` field on `RetrievalInput` controls how entries are ranked:
-
-- **`create`** (default) -- Boosts general knowledge and API documentation. Use when generating new code or starting a new task.
-- **`fix`** -- Boosts project-specific pitfalls and past failure records. Use when diagnosing an error or fixing a bug.
-
-Set the mode in `RetrievalInput`:
+Set `mode=RetrievalMode.CREATE` when writing new code. Set `mode=RetrievalMode.FIX` when debugging an error. See [How Retrieval Ranking Works](../explanation/retrieval-ranking.md) for how modes affect scoring.
 
 ```python
 from __future__ import annotations
@@ -87,7 +82,7 @@ fix_input = RetrievalInput(
 )
 ```
 
-In fix mode, entries tagged with the same `project` receive additional ranking weight.
+Execute as shown in [How to retrieve entries via Temporal workflow](#how-to-retrieve-entries-via-temporal-workflow) above.
 
 ## How to control the token budget
 
@@ -105,11 +100,13 @@ small = RetrievalInput(tags=["lib:pydantic"], token_budget=2000)
 large = RetrievalInput(tags=["lang:python"], token_budget=10000)
 ```
 
+Execute as shown in [How to retrieve entries via Temporal workflow](#how-to-retrieve-entries-via-temporal-workflow) above.
+
 The `RetrievalResult.token_count` field reports the actual token count of the packed entries, which will be at most `token_budget`.
 
 ## How to exclude unreviewed entries
 
-Extracted entries are flagged `needs_review=True` until approved. To exclude them from retrieval results, set `approved_only=True`:
+Set `approved_only=True` to exclude entries pending review:
 
 ```python
 from __future__ import annotations
@@ -121,6 +118,8 @@ input = RetrievalInput(
     approved_only=True,
 )
 ```
+
+Execute as shown in [How to retrieve entries via Temporal workflow](#how-to-retrieve-entries-via-temporal-workflow) above.
 
 Via CLI, use `--json` output and filter:
 

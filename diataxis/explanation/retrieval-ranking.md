@@ -18,11 +18,7 @@ Every candidate entry receives a score based on two factors: tag overlap and mod
 
 **Base score** is the count of tags shared between the entry and the query. An entry tagged `lang:python, lib:sqlalchemy` queried with `lang:python, lib:sqlalchemy, domain:testing` has a base score of 2 (two tags overlap). An entry with no overlapping tags scores 0 and is excluded entirely.
 
-**Mode-based boosting** adjusts the base score depending on the retrieval intent:
-
-- In create mode, each overlapping tag from a general namespace (`lang`, `lib`, `domain`) adds +0.5 to the score. API doc entries (`entry_type=api_doc`) receive an additional +1.0. This pushes reference material and broadly applicable advice above project-specific pitfalls.
-
-- In fix mode, each overlapping tag from an extracted namespace (`project`, `pattern`) adds +0.5 to the score. Pitfall entries (`entry_type=pitfall`) receive an additional +1.0. This pushes project-specific lessons and failure patterns above generic best practices.
+**Mode-based boosting** adjusts the base score depending on the retrieval intent. In create mode, each overlapping tag from a general namespace (`lang`, `lib`, `domain`) adds +0.5 to the score, and API doc entries (`entry_type=api_doc`) receive an additional +1.0. This pushes reference material and broadly applicable advice above project-specific pitfalls. In fix mode, each overlapping tag from an extracted namespace (`project`, `pattern`) adds +0.5 to the score, and pitfall entries (`entry_type=pitfall`) receive an additional +1.0. This pushes project-specific lessons and failure patterns above generic best practices.
 
 The effect is that an entry tagged `project:forge, pattern:retry-pattern` with type `pitfall` might score 4.0 in fix mode but only 2.0 in create mode. The entry is still returned in both modes -- it just ranks differently.
 

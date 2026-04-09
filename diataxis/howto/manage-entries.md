@@ -64,9 +64,7 @@ Apply the update by entry ID:
 pbook update 1 --file updates.json
 ```
 
-Any field present in the JSON replaces the existing value. Omitted fields are unchanged. Tag validation runs on the new tags before saving.
-
-See [data model reference](../reference/data-model.md) for valid tag formats.
+Tag validation runs on updated tags. See [CLI Reference](../reference/cli.md) for details.
 
 ## How to review and approve extracted entries
 
@@ -95,3 +93,5 @@ pbook reject 3
 This permanently deletes the entry from the database. Rejection is irreversible -- the experience data that produced the entry is not stored separately and cannot be re-extracted.
 
 See [CLI reference](../reference/cli.md) for all review-related commands.
+
+For why entries need review, see [Understanding the Quality Bar](../explanation/quality-bar.md).

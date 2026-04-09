@@ -20,7 +20,7 @@ The universal write model for all entry types.
 |------------------|-------------|------------|--------------------------------------------------|
 | `title`          | `str`       | required   | Short descriptive title                          |
 | `content`        | `str`       | required   | Entry body; for `api_doc` entries, holds serialized `ApiDocRecord` JSON |
-| `tags`           | `list[str]` | `[]`       | Namespaced tags (see Tag System Reference)       |
+| `tags`           | `list[str]` | `[]`       | Namespaced tags (see [Tag System Reference](tags.md)) |
 | `entry_type`     | `EntryType` | `curated`  | Content type discriminator                       |
 | `source_project` | `str`       | `""`       | Project that generated this entry                |
 | `source_task_id` | `str`       | `""`       | Task ID that generated this entry                |
@@ -43,6 +43,8 @@ The universal write model for all entry types.
 ```json
 {"title": "sqlalchemy.create_engine", "content": "{\"library\": \"sqlalchemy\", \"method\": \"sqlalchemy.create_engine\", \"summary\": \"Create a new Engine instance.\", \"signature\": \"create_engine(url, **kwargs) -> Engine\"}", "tags": ["lib:sqlalchemy"], "entry_type": "api_doc"}
 ```
+
+For usage examples, see [How to Manage Entries](../howto/manage-entries.md).
 
 ## ApiDocRecord
 
@@ -90,6 +92,8 @@ Output from the retrieval workflow.
 | `entries`          | `list[dict]` | Ranked and packed entry dicts            |
 | `token_count`      | `int`        | Total estimated tokens in packed entries |
 | `total_candidates` | `int`        | Number of candidates before ranking      |
+
+For practical retrieval examples, see [How to Retrieve Entries](../howto/retrieve-entries.md).
 
 ## Database schema
 

@@ -1,0 +1,93 @@
+[[runs]]
+timestamp = "2026-04-09T13:30:00Z"
+description = "Initial scoring after first draft"
+
+[runs.project]
+topic_decomposition = { score = 5, justification = "Nine topics covering the full surface area. No redundancy. Complexity levels appropriate (beginner→intermediate→advanced)." }
+quadrant_balance = { score = 4, justification = "Good balance for project-docs type. 4 reference, 4 how-to, 3 explanation, 1 tutorial. Could use a second tutorial covering API doc record creation." }
+audience_alignment = { score = 5, justification = "Language and complexity match the stated audience of engineers. Prerequisites are reasonable." }
+completeness = { score = 5, justification = "All 12 content files and 4 index pages are drafted. No planned files missing." }
+
+[runs.files."tutorials/getting-started.md"]
+coverage = { score = 5, justification = "All 5 items in covers addressed: worker startup, adding entry, listing/retrieving, pushing experience, reviewing/approving." }
+detail_compliance = { score = 5, justification = "Real CLI commands with concrete JSON files. Output shown at every step." }
+guidance_adherence = { score = 4, justification = "Line 112 contains an explanatory sentence about the extraction LLM instead of a narrative result statement. Should be 'You should now see the extracted entry' not 'The extraction workflow sent...'." }
+cross_linking = { score = 5, justification = "Links to explanation/quality-bar.md and reference/cli.md present." }
+quadrant_purity = { score = 4, justification = "One explanatory sentence at line 112 drifts into explanation territory. Otherwise strong tutorial structure." }
+
+[runs.files."howto/manage-entries.md"]
+coverage = { score = 5, justification = "All 5 tasks covered: add, check duplicate, update, review/approve, reject." }
+detail_compliance = { score = 5, justification = "Task-focused, assumes competence. CLI commands with minimal JSON examples." }
+guidance_adherence = { score = 5, justification = "Links to reference/cli.md and reference/data-model.md as specified." }
+cross_linking = { score = 4, justification = "Could add link to explanation/quality-bar.md when discussing review." }
+quadrant_purity = { score = 4, justification = "Lines 67-68 explain JSON merging semantics ('Omitted fields are unchanged') — this is teaching, not doing. Remove or reduce to one sentence." }
+
+[runs.files."howto/retrieve-entries.md"]
+coverage = { score = 5, justification = "All 5 tasks covered: CLI tags, Temporal workflow, create/fix mode, token budget, exclude unreviewed." }
+detail_compliance = { score = 4, justification = "Two code examples (lines 102-106, 119-123) show RetrievalInput creation without workflow execution. Should complete with execute_workflow or reference prior example." }
+guidance_adherence = { score = 4, justification = "Python code has complete imports. But mode explanation at lines 64-68 is explanatory rather than directive." }
+cross_linking = { score = 5, justification = "Links to explanation/retrieval-ranking.md and reference/workflows.md present." }
+quadrant_purity = { score = 3, justification = "Lines 64-68 explain design rationale for create/fix modes (belongs in explanation). Line 112 teaches about needs_review flag. Should link to explanation docs instead." }
+
+[runs.files."howto/push-experience.md"]
+coverage = { score = 5, justification = "All 3 tasks covered: CLI push, Temporal workflow, structuring input." }
+detail_compliance = { score = 4, justification = "Good/bad examples present. Temporal code complete. But lines 111-134 are explanatory rather than task-focused." }
+guidance_adherence = { score = 3, justification = "Guidance says 'emphasize what makes good push data' and 'link to quality-bar.md'. The file explains at length instead of linking. Should replace with brief statement + link." }
+cross_linking = { score = 4, justification = "Links to explanation/quality-bar.md and reference/data-model.md present. The good/bad examples section should be replaced with a link." }
+quadrant_purity = { score = 3, justification = "Lines 111-134 are extended explanation of what constitutes good input. This is teaching (explanation quadrant), not task guidance. Replace with 1-2 sentences + link to quality-bar.md." }
+
+[runs.files."howto/temporal-integration.md"]
+coverage = { score = 5, justification = "All 3 integration paths covered: Temporal workflow calls, cross-queue setup, library access without Temporal." }
+detail_compliance = { score = 5, justification = "Complete runnable Python code for all examples. Includes imports." }
+guidance_adherence = { score = 4, justification = "Line 3 is an explanatory preamble; should jump to task sections directly." }
+cross_linking = { score = 4, justification = "Links to reference/workflows.md and reference/data-model.md present." }
+quadrant_purity = { score = 4, justification = "Line 3 is a teaching preamble. Line 78 explains rather than instructs. Minor issues." }
+
+[runs.files."reference/tags.md"]
+coverage = { score = 4, justification = "All 5 namespaces, inference mappings, and validation rules present. No anti-examples of invalid tags shown." }
+detail_compliance = { score = 5, justification = "Tabular throughout. Consistent table format for all sections." }
+guidance_adherence = { score = 3, justification = "Guidance says to link to explanation/retrieval-ranking.md. No such link present. Functions section contains implementation metadata." }
+cross_linking = { score = 2, justification = "No links to sibling quadrants. Should link to explanation/retrieval-ranking.md and howto/retrieve-entries.md." }
+quadrant_purity = { score = 4, justification = "Line 70 'All are pure functions with no side effects' is implementation commentary. Functions section could be tighter." }
+
+[runs.files."reference/data-model.md"]
+coverage = { score = 4, justification = "All models documented with field tables. JSON examples for PlaybookEntry types. Missing standalone ApiDocRecord JSON example. Database schema present." }
+detail_compliance = { score = 5, justification = "Tabular format. One section per model. Consistent field tables." }
+guidance_adherence = { score = 3, justification = "Guidance says to link to howto/manage-entries.md. No such link present." }
+cross_linking = { score = 2, justification = "No links to how-to guides. Tag reference link is text-only, not a markdown link." }
+quadrant_purity = { score = 5, justification = "Pure reference. Describes without instructing or explaining." }
+
+[runs.files."reference/cli.md"]
+coverage = { score = 4, justification = "All 12 commands documented with synopsis, options table, and example. Missing: exit codes and error handling section (specified in covers)." }
+detail_compliance = { score = 5, justification = "Consistent format throughout: synopsis, options table, example." }
+guidance_adherence = { score = 3, justification = "Guidance says to link to howto/manage-entries.md and howto/retrieve-entries.md. No cross-links present." }
+cross_linking = { score = 1, justification = "No cross-links to any other quadrant." }
+quadrant_purity = { score = 5, justification = "Pure reference. Neutral, factual, consistent structure." }
+
+[runs.files."reference/workflows.md"]
+coverage = { score = 5, justification = "All 4 workflows documented. All activities in summary table. Task queue name present. Step tables with timeouts." }
+detail_compliance = { score = 5, justification = "Consistent format per workflow. Activity summary table at end." }
+guidance_adherence = { score = 3, justification = "Guidance says to link to both howto files. Only push-experience link present; missing retrieve-entries link." }
+cross_linking = { score = 2, justification = "Only one cross-link (to push-experience). Missing links to retrieve-entries, manage-entries, data-model, and explanation docs." }
+quadrant_purity = { score = 4, justification = "Line 19 'Ranking uses mode-based boosting' is explanatory. Should link to explanation or state factually." }
+
+[runs.files."explanation/quality-bar.md"]
+coverage = { score = 5, justification = "All 5 items covered: why bar exists, unexpected+actionable meaning, generic exclusion, extraction prompt role, optimistic review model." }
+detail_compliance = { score = 5, justification = "Discursive prose. Connects concepts. Provides context and rationale." }
+guidance_adherence = { score = 5, justification = "Centers on core principle. Uses concrete examples (type hints vs Mistral OCR). Links to reference and how-to." }
+cross_linking = { score = 4, justification = "Links to workflows.md and push-experience.md. Could add link to data-model.md." }
+quadrant_purity = { score = 5, justification = "Pure explanation. Answers 'why', makes connections, no instructions." }
+
+[runs.files."explanation/retrieval-ranking.md"]
+coverage = { score = 5, justification = "All 5 items covered: two modes, tag overlap scoring, mode weighting, token packing, ranking vs filtering." }
+detail_compliance = { score = 5, justification = "Discursive. Connects scoring design to the problem it solves." }
+guidance_adherence = { score = 4, justification = "Good intuition-first approach. Minor: uses bullet list at one point instead of prose." }
+cross_linking = { score = 4, justification = "Links to tags.md and retrieve-entries how-to. Missing link to data-model.md for RetrievalInput." }
+quadrant_purity = { score = 4, justification = "Minor bullet list (lines 15-19) could be more discursive. Otherwise strong explanation." }
+
+[runs.files."explanation/architecture.md"]
+coverage = { score = 4, justification = "Covers 4 of 5 items. Missing: explicit rationale for namespaced tag vocabulary. Database, queue, ingestion paths, Function Core, sax-llm all covered." }
+detail_compliance = { score = 5, justification = "Discursive. Discusses tradeoffs. Defers sax-llm internals appropriately." }
+guidance_adherence = { score = 4, justification = "Guidance says to focus on rationale — achieved. But tag vocabulary rationale is missing." }
+cross_linking = { score = 3, justification = "Links to data-model and workflows reference. Missing link to tags.md for namespace details." }
+quadrant_purity = { score = 5, justification = "Pure explanation. Rationale-focused, no implementation details." }

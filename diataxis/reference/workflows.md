@@ -16,7 +16,9 @@ Fetch, rank, and pack playbook entries within a token budget.
 | 1    | `fetch_candidates` | 30s     | --        | Query store for entries matching tags |
 | 2    | (in-workflow)      | --      | --        | Rank by score and pack within token budget |
 
-Ranking uses mode-based boosting: `CREATE` mode boosts general tags and API docs; `FIX` mode boosts extracted tags and pitfalls.
+Ranking applies mode-based boosting. See [Retrieval Ranking](../explanation/retrieval-ranking.md) for details.
+
+For usage, see [How to Retrieve Entries](../howto/retrieve-entries.md).
 
 ## ExtractionWorkflow
 
@@ -47,6 +49,8 @@ Validate, review via LLM, and save a manually submitted playbook entry.
 | 4    | `save_extracted_entries`  | 30s     | --        | Save the reviewed entry                    |
 
 Returns early with `approved=False` if validation fails (step 1) or the LLM rejects the entry (step 3).
+
+For usage, see [How to Manage Entries](../howto/manage-entries.md).
 
 ## ExportWorkflow
 
