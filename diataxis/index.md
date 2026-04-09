@@ -1,5 +1,7 @@
 # pbook
 
+Knowledge playbook service for LLM-assisted workflows
+
 **Audience**: Engineers integrating pbook into their projects or operating it as a service
 
 ## Why pbook exists
@@ -51,7 +53,7 @@ and stored in a [SQLite database](reference/data-model.html) with
 
 ## Sections
 
-- [Tutorials](tutorials/index.html) — Set up pbook, add entries, and run the extraction pipeline
-- [How-to Guides](howto/index.html) — Task-focused instructions for common operations
-- [Reference](reference/index.html) — CLI commands, data models, workflows, and tags
-- [Explanation](explanation/index.html) — Quality bar, retrieval ranking, and architecture decisions
+- [Tutorials](tutorials/index.html) — Learn by doing
+- [How-to Guides](howto/index.html) — Accomplish specific tasks
+- [Reference](reference/index.html) — Technical descriptions
+- [Explanation](explanation/index.html) — Background and context

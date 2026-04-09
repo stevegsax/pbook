@@ -4,6 +4,54 @@ description = "Knowledge playbook service for LLM-assisted workflows"
 type = "project-docs"
 audience = "Engineers integrating pbook into their projects or operating it as a service"
 prerequisites = "Python, Temporal basics, Pydantic, SQLAlchemy, CLI tools"
+introduction = """
+## Why pbook exists
+
+LLM agents repeat mistakes. When an agent encounters a library quirk, an
+undocumented API behavior, or a subtle configuration pitfall, the lesson
+disappears at the end of the session. The next invocation starts from scratch,
+makes the same wrong first attempt, and burns the same debugging cycles.
+
+This is the problem that **Agentic Context Engineering** addresses. Research
+(Zhang et al., "Agentic Context Engineering," ICLR 2026) demonstrates that
+treating an LLM's context as an evolving **playbook** — a structured collection
+of strategies, pitfalls, and domain-specific knowledge that accumulates over
+time — yields large improvements over static prompts. On agent benchmarks, the
+approach improved accuracy by 10.6% over strong baselines. The key insight is
+that contexts should function as comprehensive, detailed playbooks rather than
+compressed summaries. Monolithic context rewriting leads to **brevity bias**
+(collapsing toward generic advice) and **context collapse** (eroding detailed
+knowledge through iterative summarization). Structured, incremental updates
+avoid both failure modes.
+
+pbook is an implementation of this principle. It stores lessons extracted from
+real project experience and surfaces them at the moment they are relevant —
+giving the LLM the specific, hard-won knowledge it needs before it starts
+working. Every entry must clear a strict quality bar: it must be **unexpected**
+(the default approach would have been wrong) and **actionable** (there is
+specific advice that helps next time). Generic advice like "use proper error
+handling" is rejected. Specific advice like "Mistral OCR returns base64 with a
+`data:` URI prefix — strip it before decoding" is kept. See
+[why the quality bar exists](explanation/quality-bar.html) for the reasoning
+behind this constraint.
+
+In practice, pbook runs as a Temporal worker alongside your project. Client
+workflows push experience data (what went wrong, how it was fixed), and pbook's
+extraction pipeline distills it into structured entries tagged by language,
+library, domain, and project. When the LLM needs context — writing new code or
+debugging a failure — the [retrieval system](explanation/retrieval-ranking.html)
+ranks entries by tag overlap and intent mode, packing the most relevant ones
+within a token budget. The result is a focused playbook section injected into
+the LLM's context: not a summary of everything pbook knows, but the specific
+entries that match the current task.
+
+pbook manages three content types: **pitfalls** extracted from experience,
+**curated advice** submitted by humans, and **API doc records** with method
+signatures and examples. All are managed through a
+[CLI](reference/cli.html) or [Temporal workflows](reference/workflows.html)
+and stored in a [SQLite database](reference/data-model.html) with
+[namespaced tags](reference/tags.html) for retrieval.
+"""
 
 [topics.getting-started]
 title = "Getting Started"
