@@ -181,6 +181,55 @@ pbook review [--limit N]
 pbook review --limit 10
 ```
 
+## pbook feedback
+
+Record feedback on a retrieved entry. Increments the entry's `helpful_count` or `harmful_count`, which affects future [retrieval ranking](../explanation/retrieval-ranking.md).
+
+```
+pbook feedback ENTRY_ID (--helpful | --harmful) [--context TEXT]
+```
+
+| Name        | Type    | Default  | Description                              |
+|-------------|---------|----------|------------------------------------------|
+| `ENTRY_ID`  | integer | required | Entry primary key                        |
+| `--helpful` | flag    | (none)   | Mark as helpful; mutually exclusive with `--harmful` |
+| `--harmful` | flag    | (none)   | Mark as harmful; mutually exclusive with `--helpful` |
+| `--context` | string  | `""`     | Why the entry was helpful or harmful     |
+
+Exactly one of `--helpful` or `--harmful` is required.
+
+```
+pbook feedback 42 --helpful
+pbook feedback 7 --harmful --context "Advice was outdated for v2 API"
+```
+
+For how feedback affects scoring, see [Retrieval Ranking](../explanation/retrieval-ranking.md). For the input model, see [Data Model Reference](data-model.md#feedbackinput).
+
+## pbook prune
+
+Identify entries that should be reviewed for removal. Entries are flagged if they are consistently harmful (harmful ratio exceeds 50% after 5+ retrievals) or never retrieved and older than 180 days.
+
+```
+pbook prune (--dry-run | --apply) [--min-retrievals N] [--max-harmful-ratio F] [--max-stale-days N]
+```
+
+| Name                   | Type    | Default | Description                                      |
+|------------------------|---------|---------|--------------------------------------------------|
+| `--dry-run`            | flag    | (none)  | List candidates without changing anything        |
+| `--apply`              | flag    | (none)  | Mark candidates with `needs_review=True` and tag `pattern:prune-candidate` |
+| `--min-retrievals`     | integer | `5`     | Minimum retrievals before harmful ratio applies  |
+| `--max-harmful-ratio`  | float   | `0.5`   | Harmful ratio threshold                          |
+| `--max-stale-days`     | integer | `180`   | Days before unretrieved entry is considered stale |
+
+Exactly one of `--dry-run` or `--apply` is required. Pruning never deletes entries -- it marks them for human review.
+
+```
+pbook prune --dry-run
+pbook prune --apply --min-retrievals 3 --max-harmful-ratio 0.6
+```
+
+For the quality review workflow, see [How to Manage Entries](../howto/manage-entries.md).
+
 ## pbook migrate
 
 Run database migrations.

@@ -11,12 +11,13 @@ Fetch, rank, and pack playbook entries within a token budget.
 - **Input:** `RetrievalInput`
 - **Output:** `RetrievalResult`
 
-| Step | Activity           | Timeout | Heartbeat | Description                        |
-|------|--------------------|---------|-----------|--------------------------------------|
-| 1    | `fetch_candidates` | 30s     | --        | Query store for entries matching tags |
-| 2    | (in-workflow)      | --      | --        | Rank by score and pack within token budget |
+| Step | Activity                 | Timeout | Heartbeat | Description                                       |
+|------|--------------------------|---------|-----------|---------------------------------------------------|
+| 1    | `fetch_candidates`       | 30s     | --        | Query store for entries matching tags              |
+| 2    | (in-workflow)            | --      | --        | Rank by score and pack within token budget         |
+| 3    | `record_retrieval_event` | 10s     | --        | Record which entries were served (best-effort)     |
 
-Ranking applies mode-based boosting. See [Retrieval Ranking](../explanation/retrieval-ranking.md) for details.
+Step 3 is non-blocking -- if it fails, the retrieval result is still returned. The recorded retrieval counts feed into helpfulness-aware ranking. See [Retrieval Ranking](../explanation/retrieval-ranking.md) for details.
 
 For usage, see [How to Retrieve Entries](../howto/retrieve-entries.md). For input/output field definitions, see [Data Model Reference](data-model.md).
 
@@ -70,6 +71,7 @@ Fan-out export of matching playbook entries.
 | Activity                   | Module                    | LLM Call | Database | Timeout |
 |----------------------------|---------------------------|----------|----------|---------|
 | `fetch_candidates`         | `pbook.activities.retrieval`  | No   | Read     | 30s     |
+| `record_retrieval_event`   | `pbook.activities.retrieval`  | No   | Write    | 10s     |
 | `extract_from_experience`  | `pbook.activities.extraction` | Yes  | None     | 5m      |
 | `save_extracted_entries`    | `pbook.activities.extraction` | No   | Write    | 30s     |
 | `validate_entry`           | `pbook.activities.review`     | No   | None     | 30s     |

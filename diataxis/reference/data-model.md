@@ -46,6 +46,19 @@ The universal write model for all entry types.
 
 For usage examples, see [How to Manage Entries](../howto/manage-entries.md). For tag namespace definitions, see [Tag System Reference](tags.md).
 
+## FeedbackInput
+
+Input for recording feedback on a retrieved entry.
+
+| Field            | Type   | Default  | Description                              |
+|------------------|--------|----------|------------------------------------------|
+| `entry_id`       | `int`  | required | ID of the entry to give feedback on      |
+| `helpful`        | `bool` | required | `True` for helpful, `False` for harmful  |
+| `source_project` | `str`  | `""`     | Project context for the feedback         |
+| `context`        | `str`  | `""`     | Why the entry was helpful or harmful     |
+
+For how feedback affects ranking, see [Retrieval Ranking](../explanation/retrieval-ranking.md). For the CLI command, see [pbook feedback](cli.md#pbook-feedback).
+
 ## ApiDocRecord
 
 Structured API documentation for a single library method. Stored as the `content` of a `PlaybookEntry` with `entry_type=api_doc`.
@@ -101,21 +114,26 @@ The `entries` table stores all playbook entries. Tags are stored as a JSON array
 
 ```sql
 CREATE TABLE entries (
-    id             INTEGER PRIMARY KEY AUTOINCREMENT,
-    title          VARCHAR  NOT NULL,
-    content        TEXT     NOT NULL,
-    tags_json      TEXT     NOT NULL,
-    entry_type     VARCHAR  NOT NULL DEFAULT 'curated',
-    source_project VARCHAR  NOT NULL DEFAULT '',
-    source_task_id VARCHAR  NOT NULL DEFAULT '',
-    needs_review   BOOLEAN  NOT NULL DEFAULT 0,
-    created_at     DATETIME DEFAULT (CURRENT_TIMESTAMP),
-    updated_at     DATETIME DEFAULT (CURRENT_TIMESTAMP)
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    title           VARCHAR  NOT NULL,
+    content         TEXT     NOT NULL,
+    tags_json       TEXT     NOT NULL,
+    entry_type      VARCHAR  NOT NULL DEFAULT 'curated',
+    source_project  VARCHAR  NOT NULL DEFAULT '',
+    source_task_id  VARCHAR  NOT NULL DEFAULT '',
+    needs_review    BOOLEAN  NOT NULL DEFAULT 0,
+    helpful_count   INTEGER  NOT NULL DEFAULT 0,
+    harmful_count   INTEGER  NOT NULL DEFAULT 0,
+    retrieval_count INTEGER  NOT NULL DEFAULT 0,
+    created_at      DATETIME DEFAULT (CURRENT_TIMESTAMP),
+    updated_at      DATETIME DEFAULT (CURRENT_TIMESTAMP)
 );
 
 CREATE INDEX ix_entries_source_project ON entries (source_project);
 CREATE INDEX ix_entries_entry_type ON entries (entry_type);
 ```
+
+The feedback counter columns (`helpful_count`, `harmful_count`, `retrieval_count`) track how entries perform after retrieval. `retrieval_count` is incremented automatically each time the entry is served in a retrieval result. `helpful_count` and `harmful_count` are incremented via the `pbook feedback` command. These counters feed into the [retrieval ranking algorithm](../explanation/retrieval-ranking.md).
 
 Database path resolution order:
 

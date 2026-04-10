@@ -22,6 +22,22 @@ Every candidate entry receives a score based on two factors: tag overlap and mod
 
 The effect is that an entry tagged `project:forge, pattern:retry-pattern` with type `pitfall` might score 4.0 in fix mode but only 2.0 in create mode. The entry is still returned in both modes -- it just ranks differently.
 
+## Helpfulness feedback
+
+Tag overlap and mode boosting capture what an entry is *about*. Helpfulness feedback captures how well it *performs*. Every time entries are served in a retrieval result, the system records which entries were delivered (incrementing their `retrieval_count`). Clients can then report whether an entry was helpful or harmful via `pbook feedback`, incrementing `helpful_count` or `harmful_count`.
+
+Once an entry has been retrieved at least 3 times, the scoring algorithm applies a helpfulness adjustment. The adjustment is the ratio of net helpful feedback to total retrievals, scaled by a weight of 2.0:
+
+    adjustment = ((helpful_count - harmful_count) / retrieval_count) * 2.0
+
+An entry retrieved 10 times with 8 helpful and 1 harmful report gets an adjustment of +1.4. An entry with 1 helpful and 7 harmful gets -1.2. The adjustment can push a score negative, meaning a consistently harmful entry ranks below entries with zero tag overlap.
+
+The 3-retrieval threshold prevents a single feedback report from dominating. An entry retrieved only twice gets no adjustment regardless of its feedback, giving new entries time to accumulate signal before the system judges them. Entries with zero feedback (including all pre-existing entries) receive no adjustment at all -- the algorithm is backward compatible.
+
+This feedback loop is what makes the playbook self-improving. Generic entries that sounded good but never helped in practice gradually sink. Specific entries that consistently solve real problems float higher. Over time, the token budget fills with proven advice rather than untested entries.
+
+For how to provide feedback, see [How to Manage Entries](../howto/manage-entries.md). For pruning entries with poor feedback, see [pbook prune](../reference/cli.md#pbook-prune).
+
 ## Token budget packing
 
 After scoring, entries are sorted highest-score-first and packed greedily into the token budget. Token estimation uses a rough approximation of 4 characters per token, applied to the entry's title and content concatenated.

@@ -52,6 +52,15 @@ signatures and examples. All are managed through a
 [CLI](reference/cli.html) or [Temporal workflows](reference/workflows.html)
 and stored in a [SQLite database](reference/data-model.html) with
 [namespaced tags](reference/tags.html) for retrieval.
+
+The system includes a **feedback loop** inspired by ACE's helpfulness tracking.
+Every time entries are served in a retrieval result, the system records which
+entries were delivered. Clients can then report whether entries were helpful or
+harmful via `pbook feedback`. This feedback flows back into the
+[ranking algorithm](explanation/retrieval-ranking.html): entries with strong
+helpful ratios float higher, while consistently harmful entries sink. A
+[pruning mechanism](howto/manage-entries.html) flags entries that are
+consistently harmful or never retrieved for human review.
 """
 
 [topics.getting-started]
@@ -116,11 +125,15 @@ covers = [
     "How to update an existing entry",
     "How to review and approve extracted entries",
     "How to reject a low-quality entry",
+    "How to record feedback on retrieved entries",
+    "How to identify and prune harmful or stale entries",
 ]
 detail = "Task-focused, no teaching. Assume the reader has completed the tutorial."
 guidance = """Each task is a separate headed section. Include the CLI command \
 and a minimal JSON example. Link to reference/cli.md for full option lists. \
-Link to reference/data-model.md for field details."""
+Link to reference/data-model.md for field details. The feedback and pruning \
+sections should be brief and directive — show the command, mention the effect \
+on ranking, and link to explanation/retrieval-ranking.md for details."""
 
 [topics.retrieval]
 title = "Retrieval and Ranking"
@@ -151,13 +164,18 @@ covers = [
     "Why retrieval has two modes (create vs fix)",
     "How tag overlap scoring works",
     "How mode-based weighting affects ranking",
+    "How helpfulness feedback adjusts ranking",
     "How token budget packing works",
     "Why entries are ranked, not just filtered",
 ]
 detail = "Discursive. Connect the ranking design to the problem it solves."
 guidance = """Explain the intuition: when writing new code you want best \
 practices; when debugging you want project-specific gotchas. The scoring \
-algorithm is a means to this end, not the point. Link to \
+algorithm is a means to this end, not the point. Include a section on \
+helpfulness-aware scoring: entries with feedback counters get boosted or \
+penalized based on their helpful/harmful ratio, but only after a minimum \
+retrieval threshold (3). Connect this to the ACE paper's insight that \
+playbooks should evolve based on usage signals. Link to \
 reference/data-model.md for tag namespace details."""
 
 [topics.extraction]
@@ -228,10 +246,11 @@ status = "draft"
 covers = [
     "PlaybookEntry model with all fields and defaults",
     "ApiDocRecord model",
+    "FeedbackInput model",
     "PushExperienceInput model",
     "RetrievalInput and RetrievalResult models",
     "EntryType enum values",
-    "Database schema (entries table)",
+    "Database schema (entries table with feedback counters)",
 ]
 detail = "Tabular. Field name, type, default, description for each model."
 guidance = """Mirror the Pydantic model structure. Use tables for fields. \
@@ -249,7 +268,7 @@ order = 8
 file = "reference/cli.md"
 status = "draft"
 covers = [
-    "All 12 pbook commands with synopsis",
+    "All 14 pbook commands with synopsis",
     "Options, arguments, and defaults for each command",
     "Exit codes and error handling",
 ]
@@ -270,7 +289,7 @@ prerequisites = ["retrieval", "extraction"]
 file = "reference/workflows.md"
 status = "draft"
 covers = [
-    "RetrievalWorkflow input/output and steps",
+    "RetrievalWorkflow input/output and steps (including retrieval recording)",
     "ExtractionWorkflow input/output and steps",
     "ManualEntryWorkflow input/output and steps",
     "ExportWorkflow input/output and steps",
