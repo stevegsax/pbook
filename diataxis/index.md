@@ -44,8 +44,15 @@ within a token budget. The result is a focused playbook section injected into
 the LLM's context: not a summary of everything pbook knows, but the specific
 entries that match the current task.
 
-pbook manages two content types: **pitfalls** extracted from experience and
-**curated advice** submitted by humans. All entries are managed through a
+pbook supports three ingestion paths. **Experience extraction** takes structured
+problem/resolution reports and runs them through an LLM extraction pipeline.
+**Transcript ingestion** analyzes Claude Code conversation transcripts directly
+-- scanning `~/.claude/projects/` to discover sessions, filtering out noise,
+and identifying experiences automatically via batch LLM analysis through forge.
+**Direct submission** lets humans add curated advice with LLM quality review.
+All three paths produce the same output: tagged, embedded playbook entries.
+
+All entries are managed through a
 [CLI](reference/cli.html) or [Temporal workflows](reference/workflows.html)
 and stored in a [SQLite database](reference/data-model.html) with
 [namespaced tags](reference/tags.html) for retrieval. Each entry carries a

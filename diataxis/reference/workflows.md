@@ -1,8 +1,8 @@
 # Temporal Workflows Reference
 
-## Task queue
+## Task queues
 
-All workflows and activities run on `pbook-task-queue`.
+Most workflows and activities run on `pbook-task-queue`. The transcript ingestion workflows (TranscriptIngestionWorkflow, BatchIngestionWorkflow) run on `forge-task-queue` and call back into pbook-task-queue for extraction and persistence.
 
 ## RetrievalWorkflow
 
@@ -91,6 +91,38 @@ Prune stale/harmful entries and consolidate semantically similar entries.
 
 Steps 5-8 repeat for each cluster. Consolidation prevents context collapse by merging redundant entries while preserving all unique insights.
 
+## TranscriptIngestionWorkflow
+
+Analyze a single Claude Code transcript and extract playbook entries. Runs on **forge's task queue** (`forge-task-queue`) to leverage the batch LLM API.
+
+- **Input:** JSON `{"path": str, "project": str, "session_id": str}`
+- **Output:** `{"experiences_found": int, "entries_created": int, "session_id": str}`
+
+| Step | Activity                 | Queue | Timeout | Description                                              |
+|------|--------------------------|-------|---------|----------------------------------------------------------|
+| 1    | `prepare_transcript`     | forge | 120s    | Read and render JSONL transcript                         |
+| 2    | `batch_submit_and_wait`  | forge | 25h     | Submit analysis to Anthropic batch API                   |
+| 3    | (cross-queue child)      | pbook | --      | Execute ExtractionWorkflow with identified experiences   |
+| 4    | `record_ingested_session`| pbook | 30s     | Record session as processed                              |
+
+Step 2 uses forge's batch dispatch: the workflow submits a request, waits for the BatchPollerWorkflow to signal completion. Step 3 calls pbook's existing ExtractionWorkflow on pbook-task-queue.
+
+For usage, see [How to Ingest Transcripts](../howto/ingest-transcripts.md).
+
+## BatchIngestionWorkflow
+
+Fan out to process multiple transcript sessions in parallel. Runs on forge's task queue.
+
+- **Input:** JSON `{"sessions": [{"path": str, "project": str, "session_id": str}, ...]}`
+- **Output:** `{"sessions_processed": int, "total_experiences": int, "total_entries_created": int}`
+
+| Step | Activity   | Timeout | Description                                          |
+|------|------------|---------|------------------------------------------------------|
+| 1    | (fan-out)  | --      | Start child TranscriptIngestionWorkflow per session   |
+| 2    | (gather)   | --      | Await all child results                              |
+
+For usage, see [How to Ingest Transcripts](../howto/ingest-transcripts.md).
+
 ## Activity summary
 
 | Activity                            | Module                        | LLM Call | Database | Timeout |
@@ -109,5 +141,7 @@ Steps 5-8 repeat for each cluster. Consolidation prevents context collapse by me
 | `consolidate_entries_llm`           | `pbook.activities.maintenance`| Yes      | None     | 5m      |
 | `fetch_entry_ids`                   | `pbook.activities.export`     | No       | Read     | 30s     |
 | `export_single_entry`              | `pbook.activities.export`     | No       | Read     | 30s     |
+| `prepare_transcript`               | `forge.activities.ingestion`  | No       | Read     | 120s    |
+| `record_ingested_session`          | `pbook.activities.extraction` | No       | Write    | 30s     |
 
 The `compute_embedding` activity calls the OpenAI API (`text-embedding-3-small`) and returns a base64-encoded float32 vector. It is not an LLM call but does require the `OPENAI_API_KEY` environment variable.

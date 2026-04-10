@@ -46,8 +46,15 @@ within a token budget. The result is a focused playbook section injected into
 the LLM's context: not a summary of everything pbook knows, but the specific
 entries that match the current task.
 
-pbook manages two content types: **pitfalls** extracted from experience and
-**curated advice** submitted by humans. All entries are managed through a
+pbook supports three ingestion paths. **Experience extraction** takes structured
+problem/resolution reports and runs them through an LLM extraction pipeline.
+**Transcript ingestion** analyzes Claude Code conversation transcripts directly
+-- scanning `~/.claude/projects/` to discover sessions, filtering out noise,
+and identifying experiences automatically via batch LLM analysis through forge.
+**Direct submission** lets humans add curated advice with LLM quality review.
+All three paths produce the same output: tagged, embedded playbook entries.
+
+All entries are managed through a
 [CLI](reference/cli.html) or [Temporal workflows](reference/workflows.html)
 and stored in a [SQLite database](reference/data-model.html) with
 [namespaced tags](reference/tags.html) for retrieval. Each entry carries a
@@ -199,6 +206,30 @@ Connect to real examples — 'always use type hints' is too generic, but \
 'Mistral OCR returns base64 with a data URI prefix' is specific and \
 unexpected. Link to reference/workflows.md for the extraction prompt."""
 
+[topics.ingestion]
+title = "Transcript Ingestion"
+description = "Batch ingestion of Claude Code conversation transcripts"
+complexity = "intermediate"
+order = 5.5
+prerequisites = ["extraction"]
+
+[topics.ingestion.howto]
+file = "howto/ingest-transcripts.md"
+status = "draft"
+covers = [
+    "How to preview sessions with dry-run",
+    "How to ingest a single session",
+    "How to batch-ingest all sessions",
+    "How to filter by project",
+    "How to reprocess already-ingested sessions",
+]
+detail = "Task-focused CLI examples. Assume forge worker and pbook worker are running."
+guidance = """Show the CLI commands with real output examples. Start with \
+dry-run (no Temporal required), then single-session, then batch. Mention \
+that LLM analysis is routed through forge's batch API. Link to \
+explanation/architecture.md for why forge is involved and \
+reference/cli.md for full option details."""
+
 [topics.tags]
 title = "Tag System"
 description = "Namespaced tags and their role in retrieval"
@@ -235,6 +266,8 @@ covers = [
     "RetrievalInput and RetrievalResult models",
     "EntryType enum values",
     "Database schema (entries table with embedding and feedback counters)",
+    "Ingested sessions tracking table (ingested_sessions)",
+    "SessionInfo model for transcript discovery",
 ]
 detail = "Tabular. Field name, type, default, description for each model."
 guidance = """Mirror the Pydantic model structure. Use tables for fields. \
@@ -252,7 +285,7 @@ order = 8
 file = "reference/cli.md"
 status = "draft"
 covers = [
-    "All 14 pbook commands with synopsis",
+    "All pbook commands with synopsis (including pbook ingest)",
     "Options, arguments, and defaults for each command",
     "Exit codes and error handling",
 ]
@@ -278,8 +311,9 @@ covers = [
     "ManualEntryWorkflow input/output and steps (including embedding and semantic dedup)",
     "MaintenanceWorkflow input/output and steps (pruning and consolidation)",
     "ExportWorkflow input/output and steps",
+    "TranscriptIngestionWorkflow and BatchIngestionWorkflow (forge-side, cross-queue)",
     "All activities with their parameters and timeouts",
-    "Task queue name",
+    "Task queue name and cross-queue interaction with forge",
 ]
 detail = "Step-by-step for each workflow. Activity table with timeouts."
 guidance = """Use consistent formatting per workflow: input model, output \
@@ -312,13 +346,17 @@ status = "draft"
 covers = [
     "Why pbook has its own database and worker",
     "Why tags are namespaced with a controlled vocabulary",
-    "The two ingestion paths and when to use each",
+    "The three ingestion paths (extraction, direct submission, transcript ingestion)",
     "Why embeddings for semantic deduplication and maintenance",
     "Function Core / Imperative Shell pattern",
     "How sax-llm provides LLM access",
+    "Why transcript ingestion routes LLM calls through forge's batch API",
 ]
 detail = "Discursive. Connect design decisions to the problems they solve."
 guidance = """Focus on rationale, not implementation. Defer sax-llm internals \
 to that project's documentation — just explain that pbook uses it for LLM \
-calls and how the provider is registered. Link to reference/data-model.md \
-for specifics."""
+calls and how the provider is registered. Include a section on the forge \
+integration for transcript ingestion: why LLM calls route through forge's \
+batch API (cost efficiency, rate limit management), how the cross-queue \
+pattern works, and why domain logic stays in pbook while orchestration \
+runs on forge. Link to reference/data-model.md for specifics."""

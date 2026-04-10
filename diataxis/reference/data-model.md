@@ -129,3 +129,35 @@ Database path resolution order:
 3. `~/.local/state/pbook/pbook.db`
 
 Setting `PBOOK_DB_PATH` to an empty string disables the store.
+
+## SessionInfo
+
+`SessionInfo` is a Pydantic `BaseModel` defined in `pbook.transcript`, used for session discovery when scanning Claude Code JSONL transcript files.
+
+| Field             | Type  | Description                                   |
+|-------------------|-------|-----------------------------------------------|
+| `path`            | `str` | Absolute path to the JSONL session file       |
+| `session_id`      | `str` | Session UUID (filename stem)                  |
+| `project_dir_name`| `str` | Claude Code project directory name            |
+| `project_name`    | `str` | Inferred project name (last path segment)     |
+| `size_bytes`      | `int` | File size in bytes                            |
+
+For how to discover and ingest sessions, see [How to Ingest Transcripts](../howto/ingest-transcripts.md).
+
+## ingested_sessions table
+
+The `ingested_sessions` table tracks which Claude Code sessions have been processed, preventing duplicate ingestion.
+
+```sql
+CREATE TABLE ingested_sessions (
+    session_id      TEXT PRIMARY KEY,
+    project_name    TEXT NOT NULL DEFAULT '',
+    ingested_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+    experiences_found INTEGER NOT NULL DEFAULT 0,
+    entries_created   INTEGER NOT NULL DEFAULT 0
+);
+```
+
+`session_id` corresponds to the `SessionInfo.session_id` field. `experiences_found` records how many raw experiences were extracted from the transcript, while `entries_created` records how many playbook entries were ultimately created. This distinction captures cases where extraction finds experiences but deduplication or filtering prevents entry creation.
+
+For the ingestion workflow, see [How to Ingest Transcripts](../howto/ingest-transcripts.md).

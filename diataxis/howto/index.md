@@ -17,6 +17,11 @@ Practical directions for accomplishing specific tasks.
 [Experience Extraction](push-experience.html)
 : How to push experience data via CLI, How to push experience via Temporal workflow, How to structure the PushExperienceInput
 
+## Transcript Ingestion
+
+[Transcript Ingestion](ingest-transcripts.html)
+: How to preview sessions with dry-run, How to ingest a single session, How to batch-ingest all sessions, How to filter by project, How to reprocess already-ingested sessions
+
 ## Temporal Workflows
 
 [Temporal Workflows](temporal-integration.html)

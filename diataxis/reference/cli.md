@@ -165,6 +165,33 @@ pbook push --file experience.json
 
 For experience data guidelines, see [How to Push Experience](../howto/push-experience.md). For input field definitions, see [Data Model Reference](data-model.md).
 
+## pbook ingest
+
+Ingest Claude session transcripts into the playbook via Temporal.
+
+```
+pbook ingest [TRANSCRIPT_PATH] [--all] [--project PROJECT] [--min-size N] [--dry-run] [--force] [--temporal-address ADDR]
+```
+
+| Name                 | Type    | Default          | Description                                |
+|----------------------|---------|------------------|--------------------------------------------|
+| `TRANSCRIPT_PATH`   | path    | (none)           | Path to a single JSONL session file        |
+| `--all`              | flag    | off              | Discover and ingest all sessions           |
+| `--project`          | string  | `""`             | Filter by project (with `--all`) or override |
+| `--min-size`         | integer | `10240`          | Minimum session file size in bytes         |
+| `--dry-run`          | flag    | off              | Show sessions/stats without ingesting      |
+| `--force`            | flag    | off              | Reprocess already-ingested sessions        |
+| `--temporal-address` | string  | `localhost:7233` | Temporal server address                    |
+
+```
+pbook ingest --all --dry-run
+pbook ingest --all
+pbook ingest --all --project forge
+pbook ingest ~/.claude/projects/<id>/session.jsonl
+```
+
+For the ingestion workflow, see [How to Ingest Transcripts](../howto/ingest-transcripts.md). For how ingestion fits into the system, see [Architecture](../explanation/architecture.md).
+
 ## pbook review
 
 List entries needing review.
