@@ -1,6 +1,6 @@
 # pbook
 
-Knowledge playbook service for LLM-assisted workflows
+Prevent LLM agents from repeating mistakes by surfacing relevant, hard-won lessons at the moment they are needed
 
 **Audience**: Engineers integrating pbook into their projects or operating it as a service
 

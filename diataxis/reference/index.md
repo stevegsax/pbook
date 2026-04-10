@@ -1,6 +1,6 @@
 # Reference
 
-Technical descriptions of pbook's data models, CLI commands, tag system, and Temporal workflows. Use these pages to look up specific fields, options, or behavior.
+Technical descriptions and specifications.
 
 ## Tag System
 
