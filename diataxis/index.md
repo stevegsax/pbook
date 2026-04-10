@@ -51,6 +51,15 @@ signatures and examples. All are managed through a
 and stored in a [SQLite database](reference/data-model.html) with
 [namespaced tags](reference/tags.html) for retrieval.
 
+The system includes a **feedback loop** inspired by ACE's helpfulness tracking.
+Every time entries are served in a retrieval result, the system records which
+entries were delivered. Clients can then report whether entries were helpful or
+harmful via `pbook feedback`. This feedback flows back into the
+[ranking algorithm](explanation/retrieval-ranking.html): entries with strong
+helpful ratios float higher, while consistently harmful entries sink. A
+[pruning mechanism](howto/manage-entries.html) flags entries that are
+consistently harmful or never retrieved for human review.
+
 ## Sections
 
 - [Tutorials](tutorials/index.html) — Learn by doing
