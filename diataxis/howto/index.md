@@ -20,7 +20,10 @@ Practical directions for accomplishing specific tasks.
 ## Transcript Ingestion
 
 [Transcript Ingestion](ingest-transcripts.html)
-: How to preview sessions with dry-run, How to ingest a single session, How to batch-ingest all sessions, How to filter by project, How to reprocess already-ingested sessions
+: How to preview sessions with dry-run, How to ingest a single session, How to batch-ingest all sessions, ...
+
+[Import Claude Code Conversations](import-claude-conversations.html)
+: End-to-end workflow — starting services, previewing, importing, reviewing results, handling failures
 
 ## Temporal Workflows
 

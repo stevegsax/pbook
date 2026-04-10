@@ -230,6 +230,38 @@ that LLM analysis is routed through forge's batch API. Link to \
 explanation/architecture.md for why forge is involved and \
 reference/cli.md for full option details."""
 
+[topics.import-workflow]
+title = "Claude Code Import Workflow"
+description = "End-to-end procedure for importing Claude Code conversations into pbook"
+complexity = "intermediate"
+order = 5.6
+prerequisites = ["ingestion"]
+
+[topics.import-workflow.howto]
+file = "howto/import-claude-conversations.md"
+status = "draft"
+covers = [
+    "Starting the required services (Temporal, forge worker, pbook worker)",
+    "Discovering Claude Code sessions with dry-run",
+    "Running the batch import",
+    "Reviewing extracted entries",
+    "Handling import failures and re-running",
+]
+detail = """End-to-end workflow walkthrough. Ordered steps that take the \
+reader from zero to extracted entries in the playbook. Assume the reader \
+already has pbook and forge installed."""
+guidance = """This is a workflow-oriented how-to (different from \
+ingest-transcripts.md which is task-reference style). Present the full \
+procedure as an ordered sequence of numbered steps, each with a clear \
+goal, a command, and verification. Cover the service startup (one \
+terminal per service), the dry-run preview, the actual import, and \
+reviewing results. Do not teach concepts — link to \
+explanation/architecture.md for the forge integration rationale, \
+explanation/quality-bar.md for why reviews matter, and \
+reference/cli.md for full command options. Mention that sessions are \
+deduplicated automatically so re-running the import is safe. Keep \
+the tone directive: 'Run this', 'Check that', not 'You might want to'."""
+
 [topics.tags]
 title = "Tag System"
 description = "Namespaced tags and their role in retrieval"
