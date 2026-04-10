@@ -4,27 +4,30 @@ All models are Pydantic `BaseModel` subclasses defined in `pbook.models`.
 
 ## Entry types
 
-`EntryType` is a `StrEnum` with three values:
+`EntryType` is a `StrEnum` with two values:
 
 | Value     | Description                                      |
 |-----------|--------------------------------------------------|
 | `pitfall` | Extracted from experience -- unexpected and actionable |
 | `curated` | Human-submitted general advice                   |
-| `api_doc` | Library documentation record                     |
 
 ## PlaybookEntry
 
 The universal write model for all entry types.
 
-| Field            | Type        | Default    | Description                                      |
-|------------------|-------------|------------|--------------------------------------------------|
-| `title`          | `str`       | required   | Short descriptive title                          |
-| `content`        | `str`       | required   | Entry body; for `api_doc` entries, holds serialized `ApiDocRecord` JSON |
-| `tags`           | `list[str]` | `[]`       | Namespaced tags (see [Tag System Reference](tags.md))  |
-| `entry_type`     | `EntryType` | `curated`  | Content type discriminator                       |
-| `source_project` | `str`       | `""`       | Project that generated this entry                |
-| `source_task_id` | `str`       | `""`       | Task ID that generated this entry                |
-| `needs_review`   | `bool`      | `False`    | Whether the entry awaits human review            |
+| Field             | Type           | Default    | Description                                      |
+|-------------------|----------------|------------|--------------------------------------------------|
+| `title`           | `str`          | required   | Short descriptive title                          |
+| `content`         | `str`          | required   | Entry body                                       |
+| `tags`            | `list[str]`    | `[]`       | Namespaced tags (see [Tag System Reference](tags.md))  |
+| `entry_type`      | `EntryType`    | `curated`  | Content type discriminator                       |
+| `source_project`  | `str`          | `""`       | Project that generated this entry                |
+| `source_task_id`  | `str`          | `""`       | Task ID that generated this entry                |
+| `needs_review`    | `bool`         | `False`    | Whether the entry awaits human review            |
+| `helpful_count`   | `int`          | `0`        | Times marked helpful via feedback                |
+| `harmful_count`   | `int`          | `0`        | Times marked harmful via feedback                |
+| `retrieval_count` | `int`          | `0`        | Times served in retrieval results                |
+| `embedding`       | `bytes \| None` | `None`     | Vector embedding (float32 blob) for semantic search |
 
 ### Example: pitfall
 
@@ -36,12 +39,6 @@ The universal write model for all entry types.
 
 ```json
 {"title": "Use WAL mode for SQLite concurrency", "content": "Enable WAL with PRAGMA journal_mode=WAL.", "tags": ["lib:sqlalchemy", "domain:database"], "entry_type": "curated"}
-```
-
-### Example: api_doc
-
-```json
-{"title": "sqlalchemy.create_engine", "content": "{\"library\": \"sqlalchemy\", \"method\": \"sqlalchemy.create_engine\", \"summary\": \"Create a new Engine instance.\", \"signature\": \"create_engine(url, **kwargs) -> Engine\"}", "tags": ["lib:sqlalchemy"], "entry_type": "api_doc"}
 ```
 
 For usage examples, see [How to Manage Entries](../howto/manage-entries.md). For tag namespace definitions, see [Tag System Reference](tags.md).
@@ -58,19 +55,6 @@ Input for recording feedback on a retrieved entry.
 | `context`        | `str`  | `""`     | Why the entry was helpful or harmful     |
 
 For how feedback affects ranking, see [Retrieval Ranking](../explanation/retrieval-ranking.md). For the CLI command, see [pbook feedback](cli.md#pbook-feedback).
-
-## ApiDocRecord
-
-Structured API documentation for a single library method. Stored as the `content` of a `PlaybookEntry` with `entry_type=api_doc`.
-
-| Field       | Type        | Default  | Description                              |
-|-------------|-------------|----------|------------------------------------------|
-| `library`   | `str`       | required | Library name (e.g. `sqlalchemy`)         |
-| `method`    | `str`       | required | Fully qualified method (e.g. `sqlalchemy.create_engine`) |
-| `summary`   | `str`       | required | 1-2 sentence description                |
-| `signature` | `str`       | required | Method signature with type hints         |
-| `examples`  | `list[str]` | `[]`     | Usage examples                           |
-| `doc_url`   | `str`       | `""`     | Link to official documentation           |
 
 ## PushExperienceInput
 
@@ -125,6 +109,7 @@ CREATE TABLE entries (
     helpful_count   INTEGER  NOT NULL DEFAULT 0,
     harmful_count   INTEGER  NOT NULL DEFAULT 0,
     retrieval_count INTEGER  NOT NULL DEFAULT 0,
+    embedding       BLOB,
     created_at      DATETIME DEFAULT (CURRENT_TIMESTAMP),
     updated_at      DATETIME DEFAULT (CURRENT_TIMESTAMP)
 );
@@ -132,6 +117,8 @@ CREATE TABLE entries (
 CREATE INDEX ix_entries_source_project ON entries (source_project);
 CREATE INDEX ix_entries_entry_type ON entries (entry_type);
 ```
+
+The `embedding` column stores a float32 vector as a binary blob, generated by the `compute_embedding` activity using OpenAI's `text-embedding-3-small` model. It is used for semantic duplicate detection and similarity search.
 
 The feedback counter columns (`helpful_count`, `harmful_count`, `retrieval_count`) track how entries perform after retrieval. `retrieval_count` is incremented automatically each time the entry is served in a retrieval result. `helpful_count` and `harmful_count` are incremented via the `pbook feedback` command. These counters feed into the [retrieval ranking algorithm](../explanation/retrieval-ranking.md).
 

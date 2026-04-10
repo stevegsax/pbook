@@ -1,6 +1,6 @@
 # Architecture and Design
 
-pbook is a knowledge playbook service that stores curated advice, extracted pitfalls, and API documentation for LLM-assisted workflows. This document explains the design decisions behind its architecture.
+pbook is a knowledge playbook service that stores curated advice and extracted pitfalls for LLM-assisted workflows. This document explains the design decisions behind its architecture.
 
 ## Why a separate database
 
@@ -18,7 +18,7 @@ pbook runs its own Temporal worker on the `pbook-task-queue`, separate from clie
 
 A client workflow calls pbook by executing a child workflow on `pbook-task-queue`. The Temporal server routes the request to the pbook worker. If the pbook worker is down, the request waits in the queue until it comes back. If the pbook worker is upgraded with new activities, client workers do not need to restart.
 
-This also means pbook's activity registrations do not pollute client workers. The pbook worker registers eight activities (fetch, save, extract, review, validate, export). A client worker does not need to know about any of them -- it only needs to know the workflow names and input models.
+This also means pbook's activity registrations do not pollute client workers. The pbook worker registers fourteen activities (fetch, save, extract, review, validate, export, compute embedding, find duplicates, prune, consolidate). A client worker does not need to know about any of them -- it only needs to know the workflow names and input models.
 
 ## Why a controlled tag vocabulary
 
@@ -32,11 +32,17 @@ See [Tag System Reference](../reference/tags.md) for namespace definitions. See 
 
 Entries enter the playbook through two paths, each designed for a different source of knowledge.
 
-**Extraction** is the automated path. A developer pushes raw experience data -- a problem, a resolution, and context -- through the `ExtractionWorkflow`. The LLM analyzes the experience and extracts structured entries, tagging them as pitfalls with `needs_review=True`. This path handles project-specific knowledge: API quirks, framework gotchas, and patterns that failed. The quality bar is enforced by the extraction prompt, which instructs the LLM to extract nothing rather than extract something generic or misleading.
+**Extraction** is the automated path. A developer pushes raw experience data -- a problem, a resolution, and context -- through the `ExtractionWorkflow`. The LLM analyzes the experience and extracts structured entries, tagging them as pitfalls with `needs_review=True`. Each entry receives a vector embedding for semantic deduplication. This path handles project-specific knowledge: API quirks, framework gotchas, and patterns that failed. The quality bar is enforced by the extraction prompt, which instructs the LLM to extract nothing rather than extract something generic or misleading.
 
-**Direct submission** is the manual path. A developer submits a curated entry through `pbook add`, which triggers the `ManualEntryWorkflow`. The entry goes through validation (tag format, required fields) and then LLM review (duplicate check, quality assessment). The LLM can approve the entry as-is, suggest improvements to the title, content, or tags, or reject it with a reason. This path handles general knowledge: best practices, API documentation, and domain-specific advice that does not come from a specific failure experience.
+**Direct submission** is the manual path. A developer submits a curated entry through `pbook add`, which triggers the `ManualEntryWorkflow`. The workflow computes an embedding for the proposed entry, checks for semantic duplicates, then runs LLM review (quality assessment informed by duplicate context). The LLM can approve the entry as-is, suggest improvements to the title, content, or tags, or reject it with a reason. This path handles general knowledge: best practices and domain-specific advice that does not come from a specific failure experience.
 
-Both paths produce the same output: `PlaybookEntry` records in the database with validated tags. The distinction between extraction and direct submission is about input, not output.
+Both paths produce the same output: `PlaybookEntry` records in the database with validated tags and vector embeddings. The distinction between extraction and direct submission is about input, not output.
+
+## Why embeddings for deduplication
+
+As a playbook grows, similar entries inevitably appear. Two developers may encounter the same SQLite quirk and push near-identical experience reports. Title-based `LIKE` matching catches exact duplicates but misses semantically equivalent entries with different wording.
+
+Vector embeddings solve this. Each entry is embedded using OpenAI's `text-embedding-3-small` model at creation time. The `ManualEntryWorkflow` computes the embedding and runs a cosine similarity check against existing entries before the LLM review step. The `MaintenanceWorkflow` uses embeddings to cluster similar entries for consolidation -- an LLM merges each cluster into a single comprehensive entry, preserving all unique insights while eliminating redundancy. This is the "grow-and-refine" mechanism prescribed by ACE: the playbook expands freely through extraction and submission, then periodically contracts through maintenance, preventing the context collapse that comes from unbounded growth.
 
 ## Function Core / Imperative Shell
 

@@ -10,7 +10,7 @@ Technical descriptions and specifications.
 ## Data Model
 
 [Data Model](data-model.html)
-: PlaybookEntry model with all fields and defaults, ApiDocRecord model, FeedbackInput model, ...
+: PlaybookEntry model with all fields (including embedding and feedback counters), FeedbackInput model, database schema
 
 ## CLI
 

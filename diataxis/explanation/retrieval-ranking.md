@@ -6,7 +6,7 @@ When you query pbook with tags like `lang:python`, `lib:sqlalchemy`, `project:fo
 
 The same set of entries serves two different purposes depending on what the caller is doing.
 
-When writing new code (create mode), the most useful context is best practices and reference implementations. You want to know the idiomatic way to use SQLAlchemy's session lifecycle, the correct signature for `create_engine`, and the standard patterns for the domain. General-purpose entries and API documentation are most valuable here.
+When writing new code (create mode), the most useful context is best practices and reference knowledge. You want to know the idiomatic way to use SQLAlchemy's session lifecycle, the standard patterns for the domain, and the common pitfalls others have already solved. General-purpose entries are most valuable here.
 
 When debugging (fix mode), the most useful context is project-specific gotchas. You want to know that SQLite's default driver enforces same-thread access on connections, that the Mistral OCR API returns base64 with an unexpected prefix, that Temporal's test server retries failed activities indefinitely. These are pitfalls -- entries extracted from real project experience where the obvious approach did not work.
 
@@ -18,7 +18,7 @@ Every candidate entry receives a score based on two factors: tag overlap and mod
 
 **Base score** is the count of tags shared between the entry and the query. An entry tagged `lang:python, lib:sqlalchemy` queried with `lang:python, lib:sqlalchemy, domain:testing` has a base score of 2 (two tags overlap). An entry with no overlapping tags scores 0 and is excluded entirely.
 
-**Mode-based boosting** adjusts the base score depending on the retrieval intent. In create mode, each overlapping tag from a general namespace (`lang`, `lib`, `domain`) adds +0.5 to the score, and API doc entries (`entry_type=api_doc`) receive an additional +1.0. This pushes reference material and broadly applicable advice above project-specific pitfalls. In fix mode, each overlapping tag from an extracted namespace (`project`, `pattern`) adds +0.5 to the score, and pitfall entries (`entry_type=pitfall`) receive an additional +1.0. This pushes project-specific lessons and failure patterns above generic best practices.
+**Mode-based boosting** adjusts the base score depending on the retrieval intent. In create mode, each overlapping tag from a general namespace (`lang`, `lib`, `domain`) adds +0.5 to the score. This pushes broadly applicable advice above project-specific pitfalls. In fix mode, each overlapping tag from an extracted namespace (`project`, `pattern`) adds +0.5 to the score, and pitfall entries (`entry_type=pitfall`) receive an additional +1.0. This pushes project-specific lessons and failure patterns above generic best practices.
 
 The effect is that an entry tagged `project:forge, pattern:retry-pattern` with type `pitfall` might score 4.0 in fix mode but only 2.0 in create mode. The entry is still returned in both modes -- it just ranks differently.
 

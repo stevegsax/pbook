@@ -1,39 +1,38 @@
 # Getting Started with pbook
 
-In this tutorial, we will set up pbook and add our first knowledge entries.
+In this tutorial, we will set up pbook and walk through the full entry lifecycle using only the CLI. No Temporal server required.
 
-By the end, we will have a running pbook worker, curated entries in the database, and experience with the review workflow for LLM-extracted entries.
+By the end, we will have entries in the database, recorded feedback, and seen duplicate detection in action.
 
 ## Prerequisites
 
 - pbook installed (`uv sync`)
-- A Temporal server running locally on `localhost:7233`
 
-## Step 1: Start the worker
+## Step 1: Initialize the database
 
-The pbook worker listens on the `pbook-task-queue` for extraction, retrieval, and export requests. Start it in a terminal:
-
-```
-pbook worker
-```
-
-We will see log output confirming the worker is running:
+Run the migration command to create the SQLite database:
 
 ```
-pbook worker starting on queue pbook-task-queue
+pbook migrate
 ```
 
-Leave this terminal open. We will use a second terminal for the remaining steps.
+Output:
+
+```
+Migrations complete.
+```
+
+This creates the database at the default XDG path (`~/.local/state/pbook/pbook.db`). To use a custom path, set `PBOOK_DB_PATH` before running any commands.
 
 ## Step 2: Add a curated entry
 
-We will create a curated advice entry about a common SQLAlchemy testing pitfall. Create a file called `entry.json`:
+We will create a curated advice entry about a real SQLite pitfall. Create a file called `entry.json`:
 
 ```json
 {
-    "title": "Call engine.dispose() in test teardown",
-    "content": "SQLAlchemy engines hold connection pools open. In tests, always call engine.dispose() in teardown (or use a fixture with addcleanup) to avoid ResourceWarning and leaked connections across test boundaries.",
-    "tags": ["lib:sqlalchemy", "domain:testing"],
+    "title": "SQLite WAL mode prevents reader blocking",
+    "content": "Always enable WAL mode on SQLite connections used by concurrent readers. Without it, writers block readers during transactions.",
+    "tags": ["lang:python", "lib:sqlite"],
     "entry_type": "curated"
 }
 ```
@@ -47,12 +46,12 @@ pbook add --file entry.json
 Output:
 
 ```
-Added: Call engine.dispose() in test teardown
+Added: SQLite WAL mode prevents reader blocking
 ```
 
-## Step 3: List entries
+## Step 3: List and retrieve entries
 
-Now we will verify the entry was stored:
+Verify the entry was stored:
 
 ```
 pbook list
@@ -61,43 +60,118 @@ pbook list
 Output:
 
 ```
-[1] Call engine.dispose() in test teardown
+[1] SQLite WAL mode prevents reader blocking
   Type: curated
-  Tags: lib:sqlalchemy, domain:testing
-  SQLAlchemy engines hold connection pools open. In tests, always call engine.dispose() in teardown (or use a fixture with addcleanup) to avoid ResourceWarning and leaked connections across test boundaries.
+  Tags: lang:python, lib:sqlite
+  Always enable WAL mode on SQLite connections used by concurrent readers. Without it, writers block readers during transactions.
 ```
 
-## Step 4: Get a single entry
-
-We can retrieve a specific entry by its ID:
+Retrieve a single entry by ID:
 
 ```
 pbook get 1
 ```
 
+For machine-readable output, add `--json`:
+
+```
+pbook get 1 --json
+```
+
+## Step 4: Check for duplicates
+
+Before adding a similar entry, check for existing matches:
+
+```
+pbook check-duplicate --title "WAL mode"
+```
+
 Output:
 
 ```
-[1] Call engine.dispose() in test teardown
+Found 1 potential duplicate(s):
+
+[1] SQLite WAL mode prevents reader blocking
   Type: curated
-  Tags: lib:sqlalchemy, domain:testing
-  SQLAlchemy engines hold connection pools open. In tests, always call engine.dispose() in teardown (or use a fixture with addcleanup) to avoid ResourceWarning and leaked connections across test boundaries.
+  Tags: lang:python, lib:sqlite
+  Always enable WAL mode on SQLite connections used by concurrent readers. ...
 ```
 
-## Step 5: Push experience data
+The title-based matching catches obvious duplicates. When entries are created through workflows (extraction or manual entry), the system also performs semantic similarity checks using vector embeddings.
 
-Now we will push raw experience data through the extraction pipeline. The LLM will analyze the experience and create entries automatically. Create a file called `experience.json`:
+## Step 5: Record feedback
+
+After using an entry in practice, record whether it helped:
+
+```
+pbook feedback 1 --helpful
+```
+
+Output:
+
+```
+Recorded helpful feedback for entry 1.
+```
+
+Or if the advice was wrong:
+
+```
+pbook feedback 1 --harmful
+```
+
+Feedback counters accumulate over time and feed into the [retrieval ranking algorithm](../explanation/retrieval-ranking.md). Entries with strong helpful ratios rank higher; consistently harmful entries sink.
+
+## Step 6: Identify entries for pruning
+
+Over time, some entries become stale or accumulate negative feedback. The prune command identifies them:
+
+```
+pbook prune --dry-run
+```
+
+Output (when there are candidates):
+
+```
+2 prune candidate(s):
+
+[5] Outdated config format
+  Reason: never retrieved and 200 days old (threshold: 180 days)
+
+[8] Wrong retry advice
+  Reason: harmful ratio 70% exceeds 50% (7/10 retrievals)
+```
+
+To mark candidates for review:
+
+```
+pbook prune --apply
+```
+
+## Step 7: Push experience through the extraction pipeline
+
+This step requires a running Temporal server and the pbook worker. If you have Temporal available, this demonstrates the full automated extraction path.
+
+Start Temporal and the worker in separate terminals:
+
+```
+temporal server start-dev
+```
+
+```
+OPENAI_API_KEY=... ANTHROPIC_API_KEY=... pbook worker
+```
+
+Create an experience report:
 
 ```json
 {
     "project": "forge",
-    "problem": "SQLite raises ProgrammingError: SQLite objects created in a thread can only be used in that same thread when sharing a connection across Temporal activity threads.",
-    "resolution": "Pass connect_args={'check_same_thread': False} to create_engine when building the SQLAlchemy engine for SQLite in multi-threaded contexts.",
-    "context": "Temporal activities run in a thread pool. The default SQLite driver enforces same-thread access on connections."
+    "problem": "SQLAlchemy engine leaked connections after hot-reload",
+    "resolution": "Added dispose() call in shutdown hook and switched to NullPool for dev"
 }
 ```
 
-Push it to the extraction workflow:
+Push it:
 
 ```
 pbook push --file experience.json
@@ -109,53 +183,30 @@ Output:
 Extraction complete: 1 entries created.
 ```
 
-We should see that one entry was created. Now we will review it before it becomes part of the active knowledge base.
+The extraction workflow calls the LLM to analyze the experience, generates a vector embedding for semantic deduplication, and saves the result with `needs_review=True`.
 
-## Step 6: Review extracted entries
-
-We will check which entries need review:
+Review and approve:
 
 ```
 pbook review
-```
-
-Output:
-
-```
-1 entry/entries need review:
-
-[2] Use check_same_thread=False for SQLite in threaded contexts [needs-review]
-  Type: pitfall
-  Tags: lib:sqlalchemy, lib:sqlite, domain:concurrency
-  Project: forge
-  SQLite's default driver enforces same-thread access on connections. Pass connect_args={'check_same_thread': False} to create_engine when ...
-```
-
-The entry looks correct. We will approve it:
-
-```
 pbook approve 2
 ```
-
-Output:
-
-```
-Approved entry 2: Use check_same_thread=False for SQLite in threaded contexts
-```
-
-The entry is now part of the active knowledge base and will be included in retrieval results.
 
 ## What we accomplished
 
 We completed the full pbook lifecycle:
 
-- Started the pbook worker on `pbook-task-queue`
-- Added a curated entry manually with `pbook add`
+- Initialized the database with `pbook migrate`
+- Added a curated entry with `pbook add`
 - Listed and retrieved entries with `pbook list` and `pbook get`
-- Pushed raw experience data through the LLM extraction pipeline with `pbook push`
+- Checked for duplicates with `pbook check-duplicate`
+- Recorded feedback with `pbook feedback`
+- Identified prune candidates with `pbook prune --dry-run`
+- Pushed experience through the extraction pipeline with `pbook push`
 - Reviewed and approved an extracted entry with `pbook review` and `pbook approve`
 
 ## Next steps
 
 - [Quality bar for entries](../explanation/quality-bar.md) -- what makes a good playbook entry
 - [CLI reference](../reference/cli.md) -- full command documentation
+- [Retrieval ranking](../explanation/retrieval-ranking.md) -- how feedback and modes affect which entries surface

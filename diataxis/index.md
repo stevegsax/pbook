@@ -44,12 +44,13 @@ within a token budget. The result is a focused playbook section injected into
 the LLM's context: not a summary of everything pbook knows, but the specific
 entries that match the current task.
 
-pbook manages three content types: **pitfalls** extracted from experience,
-**curated advice** submitted by humans, and **API doc records** with method
-signatures and examples. All are managed through a
+pbook manages two content types: **pitfalls** extracted from experience and
+**curated advice** submitted by humans. All entries are managed through a
 [CLI](reference/cli.html) or [Temporal workflows](reference/workflows.html)
 and stored in a [SQLite database](reference/data-model.html) with
-[namespaced tags](reference/tags.html) for retrieval.
+[namespaced tags](reference/tags.html) for retrieval. Each entry carries a
+vector embedding for semantic deduplication and similarity search, preventing
+the redundant entries that lead to context collapse.
 
 The system includes a **feedback loop** inspired by ACE's helpfulness tracking.
 Every time entries are served in a retrieval result, the system records which
@@ -58,7 +59,9 @@ harmful via `pbook feedback`. This feedback flows back into the
 [ranking algorithm](explanation/retrieval-ranking.html): entries with strong
 helpful ratios float higher, while consistently harmful entries sink. A
 [pruning mechanism](howto/manage-entries.html) flags entries that are
-consistently harmful or never retrieved for human review.
+consistently harmful or never retrieved for human review. A scheduled
+**maintenance workflow** consolidates semantically similar entries using LLM
+merging, keeping the playbook lean without losing knowledge.
 
 ## Sections
 

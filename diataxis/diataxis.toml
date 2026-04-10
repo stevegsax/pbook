@@ -46,12 +46,13 @@ within a token budget. The result is a focused playbook section injected into
 the LLM's context: not a summary of everything pbook knows, but the specific
 entries that match the current task.
 
-pbook manages three content types: **pitfalls** extracted from experience,
-**curated advice** submitted by humans, and **API doc records** with method
-signatures and examples. All are managed through a
+pbook manages two content types: **pitfalls** extracted from experience and
+**curated advice** submitted by humans. All entries are managed through a
 [CLI](reference/cli.html) or [Temporal workflows](reference/workflows.html)
 and stored in a [SQLite database](reference/data-model.html) with
-[namespaced tags](reference/tags.html) for retrieval.
+[namespaced tags](reference/tags.html) for retrieval. Each entry carries a
+vector embedding for semantic deduplication and similarity search, preventing
+the redundant entries that lead to context collapse.
 
 The system includes a **feedback loop** inspired by ACE's helpfulness tracking.
 Every time entries are served in a retrieval result, the system records which
@@ -60,7 +61,9 @@ harmful via `pbook feedback`. This feedback flows back into the
 [ranking algorithm](explanation/retrieval-ranking.html): entries with strong
 helpful ratios float higher, while consistently harmful entries sink. A
 [pruning mechanism](howto/manage-entries.html) flags entries that are
-consistently harmful or never retrieved for human review.
+consistently harmful or never retrieved for human review. A scheduled
+**maintenance workflow** consolidates semantically similar entries using LLM
+merging, keeping the playbook lean without losing knowledge.
 """
 
 [topics.getting-started]
@@ -73,42 +76,24 @@ order = 1
 file = "tutorials/getting-started.md"
 status = "draft"
 covers = [
-    "Starting the pbook worker",
+    "Initializing the database",
     "Adding a curated entry via CLI",
     "Listing and retrieving entries",
-    "Pushing experience data for extraction",
+    "Checking for duplicates",
+    "Recording feedback on entries",
+    "Identifying prune candidates",
+    "Pushing experience data for extraction (requires Temporal)",
     "Reviewing and approving extracted entries",
 ]
-detail = """Walk through the full lifecycle: worker startup, add an entry, \
-query it back, push experience, review results. Use real CLI commands with \
+detail = """Walk through the full lifecycle in two tiers: CLI-only operations \
+first (migrate, add, list, get, check-duplicate, feedback, prune), then the \
+Temporal workflow path (push, review, approve). Use real CLI commands with \
 concrete example JSON files. Show output at every step."""
 guidance = """Use first-person plural. Concrete, not abstract. One path — \
 no alternatives or options. The reader should have a working pbook with \
-entries in it by the end. Use numbered step headings (Step 1:, Step 2:, etc.). \
-Keep narrative tight — observation statements, not explanations. Link to \
+entries in it by the end. Steps 1-6 require no Temporal server. Step 7 \
+introduces the extraction pipeline as an optional next step. Link to \
 explanation/quality-bar.md for why the quality constraints exist."""
-
-[topics.api-docs]
-title = "Adding API Documentation"
-description = "Adding structured API documentation entries to the playbook"
-complexity = "beginner"
-order = 2
-
-[topics.api-docs.tutorials]
-file = "tutorials/adding-api-docs.md"
-status = "draft"
-covers = [
-    "Creating an ApiDocRecord JSON file",
-    "Adding an api_doc entry via CLI",
-    "Verifying api_doc entries",
-    "Seeing api_doc entries in retrieval results",
-]
-detail = """Walk through creating and adding an api_doc entry. Show the \
-JSON structure with the serialized ApiDocRecord content field. Verify \
-via list and get. Show how api_doc entries appear in retrieval."""
-guidance = """Use first-person plural. Numbered step headings. One path. \
-Emphasize the nested JSON structure (ApiDocRecord serialized inside \
-content field). Link to reference/data-model.md for field details."""
 
 [topics.entries]
 title = "Managing Entries"
@@ -244,13 +229,12 @@ order = 7
 file = "reference/data-model.md"
 status = "draft"
 covers = [
-    "PlaybookEntry model with all fields and defaults",
-    "ApiDocRecord model",
+    "PlaybookEntry model with all fields (including embedding and feedback counters)",
     "FeedbackInput model",
     "PushExperienceInput model",
     "RetrievalInput and RetrievalResult models",
     "EntryType enum values",
-    "Database schema (entries table with feedback counters)",
+    "Database schema (entries table with embedding and feedback counters)",
 ]
 detail = "Tabular. Field name, type, default, description for each model."
 guidance = """Mirror the Pydantic model structure. Use tables for fields. \
@@ -290,8 +274,9 @@ file = "reference/workflows.md"
 status = "draft"
 covers = [
     "RetrievalWorkflow input/output and steps (including retrieval recording)",
-    "ExtractionWorkflow input/output and steps",
-    "ManualEntryWorkflow input/output and steps",
+    "ExtractionWorkflow input/output and steps (including embedding generation)",
+    "ManualEntryWorkflow input/output and steps (including embedding and semantic dedup)",
+    "MaintenanceWorkflow input/output and steps (pruning and consolidation)",
     "ExportWorkflow input/output and steps",
     "All activities with their parameters and timeouts",
     "Task queue name",
@@ -328,6 +313,7 @@ covers = [
     "Why pbook has its own database and worker",
     "Why tags are namespaced with a controlled vocabulary",
     "The two ingestion paths and when to use each",
+    "Why embeddings for semantic deduplication and maintenance",
     "Function Core / Imperative Shell pattern",
     "How sax-llm provides LLM access",
 ]

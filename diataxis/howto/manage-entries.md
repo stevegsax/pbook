@@ -25,7 +25,7 @@ To print the full JSON schema for reference:
 pbook add --schema
 ```
 
-See [CLI reference](../reference/cli.md) for all `add` options. See [data model reference](../reference/data-model.md) for field definitions and valid `entry_type` values (`curated`, `pitfall`, `api_doc`).
+See [CLI reference](../reference/cli.md) for all `add` options. See [data model reference](../reference/data-model.md) for field definitions and valid `entry_type` values (`curated`, `pitfall`).
 
 ## How to check for duplicates before adding
 
