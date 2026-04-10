@@ -61,7 +61,7 @@ See [workflow reference](../reference/workflows.md) for the full `RetrievalWorkf
 
 ## How to use create vs fix mode
 
-Set `mode=RetrievalMode.CREATE` when writing new code. Set `mode=RetrievalMode.FIX` when debugging an error. See [How Retrieval Ranking Works](../explanation/retrieval-ranking.md) for how modes affect scoring.
+Set `mode="create"` when writing new code. Set `mode="fix"` when debugging an error. For why modes exist and how they affect scoring, see [How Retrieval Ranking Works](../explanation/retrieval-ranking.md).
 
 ```python
 from __future__ import annotations
@@ -106,7 +106,7 @@ The `RetrievalResult.token_count` field reports the actual token count of the pa
 
 ## How to exclude unreviewed entries
 
-Set `approved_only=True` to exclude entries pending review:
+Set `approved_only=True` to exclude entries that have not been reviewed yet:
 
 ```python
 from __future__ import annotations

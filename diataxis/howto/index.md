@@ -1,6 +1,6 @@
 # How-to Guides
 
-Practical directions for accomplishing specific tasks.
+Practical directions for accomplishing specific tasks. Each guide addresses a single goal and assumes you have completed the [Getting Started](../tutorials/getting-started.html) tutorial.
 
 ## Managing Entries
 

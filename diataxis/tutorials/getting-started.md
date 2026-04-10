@@ -9,7 +9,7 @@ By the end, we will have a running pbook worker, curated entries in the database
 - pbook installed (`uv sync`)
 - A Temporal server running locally on `localhost:7233`
 
-## Start the worker
+## Step 1: Start the worker
 
 The pbook worker listens on the `pbook-task-queue` for extraction, retrieval, and export requests. Start it in a terminal:
 
@@ -25,7 +25,7 @@ pbook worker starting on queue pbook-task-queue
 
 Leave this terminal open. We will use a second terminal for the remaining steps.
 
-## Add a curated entry
+## Step 2: Add a curated entry
 
 We will create a curated advice entry about a common SQLAlchemy testing pitfall. Create a file called `entry.json`:
 
@@ -50,7 +50,7 @@ Output:
 Added: Call engine.dispose() in test teardown
 ```
 
-## List entries
+## Step 3: List entries
 
 Now we will verify the entry was stored:
 
@@ -67,7 +67,7 @@ Output:
   SQLAlchemy engines hold connection pools open. In tests, always call engine.dispose() in teardown (or use a fixture with addcleanup) to avoid ResourceWarning and leaked connections across test boundaries.
 ```
 
-## Get a single entry
+## Step 4: Get a single entry
 
 We can retrieve a specific entry by its ID:
 
@@ -84,7 +84,7 @@ Output:
   SQLAlchemy engines hold connection pools open. In tests, always call engine.dispose() in teardown (or use a fixture with addcleanup) to avoid ResourceWarning and leaked connections across test boundaries.
 ```
 
-## Push experience data
+## Step 5: Push experience data
 
 Now we will push raw experience data through the extraction pipeline. The LLM will analyze the experience and create entries automatically. Create a file called `experience.json`:
 
@@ -109,9 +109,9 @@ Output:
 Extraction complete: 1 entries created.
 ```
 
-You should see that one entry was created from the experience data. Extracted entries are flagged for review before they become part of the active knowledge base.
+We should see that one entry was created. Now we will review it before it becomes part of the active knowledge base.
 
-## Review extracted entries
+## Step 6: Review extracted entries
 
 We will check which entries need review:
 

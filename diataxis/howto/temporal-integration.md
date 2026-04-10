@@ -2,8 +2,6 @@
 
 ## How to call pbook workflows from another Temporal worker
 
-Execute workflows on `pbook-task-queue` using cross-queue invocation. The pbook worker must be running.
-
 ```python
 from __future__ import annotations
 

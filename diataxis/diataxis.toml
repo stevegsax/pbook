@@ -3,6 +3,7 @@ name = "pbook"
 description = "Knowledge playbook service for LLM-assisted workflows"
 type = "project-docs"
 audience = "Engineers integrating pbook into their projects or operating it as a service"
+purpose = "Prevent LLM agents from repeating mistakes by surfacing relevant, hard-won lessons at the moment they are needed"
 prerequisites = "Python, Temporal basics, Pydantic, SQLAlchemy, CLI tools"
 introduction = """
 ## Why pbook exists
@@ -74,14 +75,37 @@ query it back, push experience, review results. Use real CLI commands with \
 concrete example JSON files. Show output at every step."""
 guidance = """Use first-person plural. Concrete, not abstract. One path — \
 no alternatives or options. The reader should have a working pbook with \
-entries in it by the end. Link to explanation/quality-bar.md for why the \
-quality constraints exist."""
+entries in it by the end. Use numbered step headings (Step 1:, Step 2:, etc.). \
+Keep narrative tight — observation statements, not explanations. Link to \
+explanation/quality-bar.md for why the quality constraints exist."""
+
+[topics.api-docs]
+title = "Adding API Documentation"
+description = "Adding structured API documentation entries to the playbook"
+complexity = "beginner"
+order = 2
+
+[topics.api-docs.tutorials]
+file = "tutorials/adding-api-docs.md"
+status = "draft"
+covers = [
+    "Creating an ApiDocRecord JSON file",
+    "Adding an api_doc entry via CLI",
+    "Verifying api_doc entries",
+    "Seeing api_doc entries in retrieval results",
+]
+detail = """Walk through creating and adding an api_doc entry. Show the \
+JSON structure with the serialized ApiDocRecord content field. Verify \
+via list and get. Show how api_doc entries appear in retrieval."""
+guidance = """Use first-person plural. Numbered step headings. One path. \
+Emphasize the nested JSON structure (ApiDocRecord serialized inside \
+content field). Link to reference/data-model.md for field details."""
 
 [topics.entries]
 title = "Managing Entries"
 description = "Adding, updating, reviewing, and removing playbook entries"
 complexity = "beginner"
-order = 2
+order = 3
 
 [topics.entries.howto]
 file = "howto/manage-entries.md"
@@ -102,7 +126,7 @@ Link to reference/data-model.md for field details."""
 title = "Retrieval and Ranking"
 description = "Querying entries by tag with intent-based ranking"
 complexity = "intermediate"
-order = 3
+order = 4
 prerequisites = ["entries"]
 
 [topics.retrieval.howto]
@@ -117,8 +141,8 @@ covers = [
 ]
 detail = "Show both CLI and Temporal workflow examples. Emphasize mode selection."
 guidance = """Include Python code for Temporal workflow calls. Show the \
-RetrievalInput model fields. Link to explanation/retrieval-ranking.md for \
-how scoring works."""
+RetrievalInput model fields. Keep mode descriptions directive (use X for Y), \
+not explanatory — link to explanation/retrieval-ranking.md for design rationale."""
 
 [topics.retrieval.explanation]
 file = "explanation/retrieval-ranking.md"
@@ -140,7 +164,7 @@ reference/data-model.md for tag namespace details."""
 title = "Experience Extraction"
 description = "Pushing experience data and the LLM extraction pipeline"
 complexity = "intermediate"
-order = 4
+order = 5
 prerequisites = ["entries"]
 
 [topics.extraction.howto]
@@ -152,9 +176,9 @@ covers = [
     "How to structure the PushExperienceInput",
 ]
 detail = "Show both CLI and Temporal examples with real JSON."
-guidance = """Emphasize what makes good push data: specific problem, specific \
-resolution, relevant context. Link to explanation/quality-bar.md for why \
-generic experience gets filtered out."""
+guidance = """Keep input structuring advice brief and directive — one or two \
+sentences, then link to explanation/quality-bar.md for the reasoning. Do not \
+inline extended explanation of what makes good vs bad input."""
 
 [topics.extraction.explanation]
 file = "explanation/quality-bar.md"
@@ -176,7 +200,7 @@ unexpected. Link to reference/workflows.md for the extraction prompt."""
 title = "Tag System"
 description = "Namespaced tags and their role in retrieval"
 complexity = "beginner"
-order = 5
+order = 6
 
 [topics.tags.reference]
 file = "reference/tags.md"
@@ -189,14 +213,14 @@ covers = [
 ]
 detail = "Tabular. One table per namespace with valid values and sources."
 guidance = """Use tables consistently. Show the extension-to-language and \
-keyword-to-domain mappings. Link to explanation/retrieval-ranking.md for \
-how tags affect ranking."""
+keyword-to-domain mappings. Cross-link to explanation/retrieval-ranking.md \
+for how tags affect ranking, and howto/retrieve-entries.md for practical usage."""
 
 [topics.data-model]
 title = "Data Model"
 description = "Entry types, Pydantic models, and database schema"
 complexity = "intermediate"
-order = 6
+order = 7
 
 [topics.data-model.reference]
 file = "reference/data-model.md"
@@ -212,13 +236,14 @@ covers = [
 detail = "Tabular. Field name, type, default, description for each model."
 guidance = """Mirror the Pydantic model structure. Use tables for fields. \
 Include short illustrative examples (1-3 lines JSON) for each entry type. \
-Link to howto/manage-entries.md for usage."""
+Cross-link to howto/manage-entries.md for usage, tags.md for tag namespaces, \
+and explanation/retrieval-ranking.md for scoring context."""
 
 [topics.cli]
 title = "CLI"
 description = "All pbook commands and their options"
 complexity = "beginner"
-order = 7
+order = 8
 
 [topics.cli.reference]
 file = "reference/cli.md"
@@ -230,14 +255,15 @@ covers = [
 ]
 detail = "One section per command. Synopsis, options table, example."
 guidance = """Use consistent formatting: synopsis, then options table, then \
-brief example. Link to howto/manage-entries.md and howto/retrieve-entries.md \
-for task-oriented guidance."""
+brief example. Cross-link every command to the relevant how-to guide and \
+explanation page. Link to howto/manage-entries.md, howto/retrieve-entries.md, \
+howto/push-experience.md, and explanation/quality-bar.md as appropriate."""
 
 [topics.workflows]
 title = "Temporal Workflows"
 description = "Workflow definitions, activities, and integration"
 complexity = "advanced"
-order = 8
+order = 9
 prerequisites = ["retrieval", "extraction"]
 
 [topics.workflows.reference]
@@ -254,7 +280,8 @@ covers = [
 detail = "Step-by-step for each workflow. Activity table with timeouts."
 guidance = """Use consistent formatting per workflow: input model, output \
 model, numbered steps with timeout. Activity summary table at the end. \
-Link to howto/retrieve-entries.md and howto/push-experience.md for usage."""
+Cross-link to howto/retrieve-entries.md, howto/push-experience.md, \
+howto/manage-entries.md, data-model.md, and explanation/quality-bar.md."""
 
 [topics.workflows.howto]
 file = "howto/temporal-integration.md"
@@ -266,14 +293,14 @@ covers = [
 ]
 detail = "Python code examples for each integration path."
 guidance = """Show complete, runnable code. Include imports. Cover both \
-Temporal and direct library usage. Link to reference/workflows.md for \
-workflow details."""
+Temporal and direct library usage. Jump straight to task sections — no \
+explanatory preamble. Link to reference/workflows.md for workflow details."""
 
 [topics.architecture]
 title = "Architecture"
 description = "Design principles and system structure"
 complexity = "intermediate"
-order = 9
+order = 10
 
 [topics.architecture.explanation]
 file = "explanation/architecture.md"

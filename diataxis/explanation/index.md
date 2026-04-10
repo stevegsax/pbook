@@ -1,6 +1,6 @@
 # Explanation
 
-Background, context, and deeper understanding.
+Background and rationale behind pbook's design decisions. These pages explain why things work the way they do — read them when you want to understand the reasoning, not just the mechanics.
 
 ## Retrieval and Ranking
 

@@ -98,7 +98,7 @@ The workflow input is a JSON string with two keys: `experiences` (a list of expe
 
 ## How to structure the PushExperienceInput
 
-The quality of extracted entries depends on the quality of the input. `PushExperienceInput` has five fields:
+`PushExperienceInput` has five fields:
 
 | Field | Required | Description |
 |---|---|---|
@@ -108,6 +108,4 @@ The quality of extracted entries depends on the quality of the input. `PushExper
 | `context` | no | Relevant context (code, errors, stack traces) |
 | `metadata` | no | Arbitrary key-value pairs (library versions, environment details) |
 
-Structure your input with a specific problem, specific resolution, and relevant context. Vague descriptions like "code didn't work" produce no useful extraction.
-
-For detailed guidance on what makes good experience data, see [Understanding the Quality Bar](../explanation/quality-bar.md). See [data model reference](../reference/data-model.md) for the full `PushExperienceInput` schema.
+Provide a specific problem, specific resolution, and relevant context. See [Understanding the Quality Bar](../explanation/quality-bar.md) for what makes good input and why vague descriptions are filtered out. See [data model reference](../reference/data-model.md) for the full `PushExperienceInput` schema.

@@ -69,4 +69,4 @@ Tags must conform to `namespace:value` format. The following constraints apply:
 
 All functions are defined in `pbook.tags`.
 
-For how tags affect retrieval ranking, see [Retrieval Ranking](../explanation/retrieval-ranking.md). For practical tag usage in queries, see [How to Retrieve Entries](../howto/retrieve-entries.md).
+For how tags affect retrieval scoring, see [Retrieval Ranking](../explanation/retrieval-ranking.md). For practical tag usage in queries, see [How to Retrieve Entries](../howto/retrieve-entries.md).

@@ -10,7 +10,7 @@ First, isolation. Client workflows cannot corrupt playbook data through accident
 
 Second, sharing. Multiple projects query the same playbook. Forge, pbook itself, and future projects all draw from one store. Duplicating entries per project would create drift -- the same pitfall described slightly differently in each copy, with no single source of truth.
 
-Third, operational independence. The playbook database can be backed up, migrated, or reset without coordinating with client project lifecycles. Alembic manages schema migrations. The database path follows XDG conventions (`~/.local/share/pbook/playbook.db`).
+Third, operational independence. The playbook database can be backed up, migrated, or reset without coordinating with client project lifecycles. Alembic manages schema migrations. The database path follows XDG conventions (`~/.local/state/pbook/pbook.db`).
 
 ## Why a separate Temporal queue
 

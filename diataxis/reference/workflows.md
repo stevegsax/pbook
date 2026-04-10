@@ -18,7 +18,7 @@ Fetch, rank, and pack playbook entries within a token budget.
 
 Ranking applies mode-based boosting. See [Retrieval Ranking](../explanation/retrieval-ranking.md) for details.
 
-For usage, see [How to Retrieve Entries](../howto/retrieve-entries.md).
+For usage, see [How to Retrieve Entries](../howto/retrieve-entries.md). For input/output field definitions, see [Data Model Reference](data-model.md).
 
 ## ExtractionWorkflow
 
@@ -50,7 +50,7 @@ Validate, review via LLM, and save a manually submitted playbook entry.
 
 Returns early with `approved=False` if validation fails (step 1) or the LLM rejects the entry (step 3).
 
-For usage, see [How to Manage Entries](../howto/manage-entries.md).
+For usage, see [How to Manage Entries](../howto/manage-entries.md). For the quality review model, see [Understanding the Quality Bar](../explanation/quality-bar.md).
 
 ## ExportWorkflow
 

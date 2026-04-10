@@ -18,6 +18,8 @@ pbook worker [--temporal-address ADDR]
 pbook worker --temporal-address localhost:7233
 ```
 
+For a guided introduction, see [Getting Started](../tutorials/getting-started.md).
+
 ## pbook list
 
 List playbook entries.
@@ -38,7 +40,7 @@ pbook list [--tag TAG]... [--type TYPE] [--project PROJECT] [--limit N] [--json]
 pbook list --tag lang:python --tag domain:testing --limit 5
 ```
 
-For querying strategies, see [How to Retrieve Entries](../howto/retrieve-entries.md).
+For querying strategies, see [How to Retrieve Entries](../howto/retrieve-entries.md). For how tags affect ranking, see [Retrieval Ranking](../explanation/retrieval-ranking.md).
 
 ## pbook get
 
@@ -74,7 +76,7 @@ pbook add --file FILE [--schema]
 pbook add --file entry.json
 ```
 
-For workflow context, see [How to Manage Entries](../howto/manage-entries.md).
+For workflow context, see [How to Manage Entries](../howto/manage-entries.md). For field definitions, see [Data Model Reference](data-model.md).
 
 ## pbook update
 
@@ -108,6 +110,8 @@ pbook approve ENTRY_ID
 ```
 pbook approve 42
 ```
+
+For the review workflow, see [How to Manage Entries](../howto/manage-entries.md). For why entries need review, see [Understanding the Quality Bar](../explanation/quality-bar.md).
 
 ## pbook reject
 
@@ -159,7 +163,7 @@ pbook push --file FILE [--temporal-address ADDR]
 pbook push --file experience.json
 ```
 
-For experience data guidelines, see [How to Push Experience](../howto/push-experience.md).
+For experience data guidelines, see [How to Push Experience](../howto/push-experience.md). For input field definitions, see [Data Model Reference](data-model.md).
 
 ## pbook review
 
