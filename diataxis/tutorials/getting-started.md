@@ -1,5 +1,11 @@
-# Getting Started with pbook
-
++++
+title = "Getting Started with pbook"
+weight = 12
+description = "First-time setup and basic usage of pbook"
+topic = "getting-started"
+covers = ["Initializing the database", "Adding a curated entry via CLI", "Listing and retrieving entries", "Checking for duplicates", "Recording feedback on entries", "Identifying prune candidates", "Pushing experience data for extraction (requires Temporal)", "Reviewing and approving extracted entries"]
+detail = "Walk through the full lifecycle in two tiers: CLI-only operations first (migrate, add, list, get, check-duplicate, feedback, prune), then the Temporal workflow path (push, review, approve). Use real CLI commands with concrete example JSON files. Show output at every step."
++++
 In this tutorial, we will set up pbook and walk through the full entry lifecycle using only the CLI. No Temporal server required.
 
 By the end, we will have entries in the database, recorded feedback, and seen duplicate detection in action.
@@ -119,7 +125,7 @@ Or if the advice was wrong:
 pbook feedback 1 --harmful
 ```
 
-Feedback counters accumulate over time and feed into the [retrieval ranking algorithm](../explanation/retrieval-ranking.md). Entries with strong helpful ratios rank higher; consistently harmful entries sink.
+Feedback counters accumulate over time and feed into the [retrieval ranking algorithm](/explanation/retrieval-ranking/). Entries with strong helpful ratios rank higher; consistently harmful entries sink.
 
 ## Step 6: Identify entries for pruning
 
@@ -207,6 +213,6 @@ We completed the full pbook lifecycle:
 
 ## Next steps
 
-- [Quality bar for entries](../explanation/quality-bar.md) -- what makes a good playbook entry
-- [CLI reference](../reference/cli.md) -- full command documentation
-- [Retrieval ranking](../explanation/retrieval-ranking.md) -- how feedback and modes affect which entries surface
+- [Quality bar for entries](/explanation/quality-bar/) -- what makes a good playbook entry
+- [CLI reference](/reference/cli/) -- full command documentation
+- [Retrieval ranking](/explanation/retrieval-ranking/) -- how feedback and modes affect which entries surface

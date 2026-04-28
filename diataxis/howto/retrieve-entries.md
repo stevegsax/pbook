@@ -1,5 +1,11 @@
-# How to Retrieve Playbook Entries
-
++++
+title = "How to Retrieve Playbook Entries"
+weight = 43
+description = "Querying entries by tag with intent-based ranking"
+topic = "retrieval"
+covers = ["How to query entries by tag via CLI", "How to retrieve entries via Temporal workflow", "How to use create vs fix mode", "How to control the token budget", "How to exclude unreviewed entries"]
+detail = "Show both CLI and Temporal workflow examples. Emphasize mode selection."
++++
 ## How to query entries by tag via CLI
 
 Filter entries by one or more tags. Multiple `--tag` flags are OR-matched:
@@ -57,11 +63,11 @@ result = asyncio.run(retrieve())
 print(f"Returned {len(result.entries)} entries ({result.token_count} tokens)")
 ```
 
-See [workflow reference](../reference/workflows.md) for the full `RetrievalWorkflow` contract.
+See [workflow reference](/reference/workflows/) for the full `RetrievalWorkflow` contract.
 
 ## How to use create vs fix mode
 
-Set `mode="create"` when writing new code. Set `mode="fix"` when debugging an error. For why modes exist and how they affect scoring, see [How Retrieval Ranking Works](../explanation/retrieval-ranking.md).
+Set `mode="create"` when writing new code. Set `mode="fix"` when debugging an error. For why modes exist and how they affect scoring, see [How Retrieval Ranking Works](/explanation/retrieval-ranking/).
 
 ```python
 from __future__ import annotations
@@ -127,4 +133,4 @@ Via CLI, use `--json` output and filter:
 pbook list --tag domain:testing --json | jq '[.[] | select(.needs_review == false)]'
 ```
 
-See [retrieval ranking](../explanation/retrieval-ranking.md) for how ranking scores are computed.
+See [retrieval ranking](/explanation/retrieval-ranking/) for how ranking scores are computed.

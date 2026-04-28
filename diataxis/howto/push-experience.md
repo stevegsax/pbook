@@ -1,5 +1,11 @@
-# How to Push Experience Data
-
++++
+title = "How to Push Experience Data"
+weight = 53
+description = "Pushing experience data and the LLM extraction pipeline"
+topic = "extraction"
+covers = ["How to push experience data via CLI", "How to push experience via Temporal workflow", "How to structure the PushExperienceInput"]
+detail = "Show both CLI and Temporal examples with real JSON."
++++
 ## How to push experience data via CLI
 
 Create a JSON file with the experience fields:
@@ -108,4 +114,4 @@ The workflow input is a JSON string with two keys: `experiences` (a list of expe
 | `context` | no | Relevant context (code, errors, stack traces) |
 | `metadata` | no | Arbitrary key-value pairs (library versions, environment details) |
 
-Provide a specific problem, specific resolution, and relevant context. See [Understanding the Quality Bar](../explanation/quality-bar.md) for what makes good input and why vague descriptions are filtered out. See [data model reference](../reference/data-model.md) for the full `PushExperienceInput` schema.
+Provide a specific problem, specific resolution, and relevant context. See [Understanding the Quality Bar](/explanation/quality-bar/) for what makes good input and why vague descriptions are filtered out. See [data model reference](/reference/data-model/) for the full `PushExperienceInput` schema.

@@ -1,5 +1,11 @@
-# How to Integrate pbook with a Temporal Workflow
-
++++
+title = "How to Integrate pbook with a Temporal Workflow"
+weight = 113
+description = "Workflow definitions, activities, and integration"
+topic = "workflows"
+covers = ["How to call pbook workflows from another Temporal worker", "How to set up cross-queue workflow execution", "How to use pbook as a Python library without Temporal"]
+detail = "Python code examples for each integration path."
++++
 ## How to call pbook workflows from another Temporal worker
 
 ```python
@@ -61,7 +67,7 @@ async def submit_entry(client: Client, title: str, content: str, tags: list[str]
     return result  # {"approved": bool, "entry": dict, ...}
 ```
 
-Refer to the [Workflow Reference](../reference/workflows.md) for input/output models and timeouts.
+Refer to the [Workflow Reference](/reference/workflows/) for input/output models and timeouts.
 
 ## How to set up cross-queue workflow execution
 
@@ -122,4 +128,4 @@ tags = infer_tags_from_context(
 # ["domain:bug-fix", "domain:database", "domain:migration", "lang:python"]
 ```
 
-Refer to the [Data Model Reference](../reference/data-model.md) for model field details.
+Refer to the [Data Model Reference](/reference/data-model/) for model field details.

@@ -1,5 +1,11 @@
-# How to Ingest Claude Code Transcripts
-
++++
+title = "How to Ingest Claude Code Transcripts"
+weight = 63
+description = "Batch ingestion of Claude Code conversation transcripts"
+topic = "ingestion"
+covers = ["How to preview sessions with dry-run", "How to ingest a single session", "How to batch-ingest all sessions", "How to filter by project", "How to reprocess already-ingested sessions"]
+detail = "Task-focused CLI examples. Assume forge worker and pbook worker are running."
++++
 ## How to preview sessions with dry-run
 
 Use `--dry-run` to inspect what would be ingested without requiring Temporal or any workers:
@@ -48,7 +54,7 @@ To override the detected project name:
 pbook ingest ~/.claude/projects/-Users-me-repos-forge/sessions/abc123.jsonl --project my-project
 ```
 
-Prerequisites: Temporal server, forge worker, and pbook worker must be running. See [architecture](../explanation/architecture.md) for forge integration rationale.
+Prerequisites: Temporal server, forge worker, and pbook worker must be running. See [architecture](/explanation/architecture/) for forge integration rationale.
 
 ## How to batch-ingest all sessions
 
@@ -90,4 +96,4 @@ Or for a single session:
 pbook ingest ~/.claude/projects/-Users-me-repos-forge/sessions/abc123.jsonl --force
 ```
 
-See [CLI reference](../reference/cli.md#pbook-ingest) for full option details.
+See [CLI reference](/reference/cli/#pbook-ingest) for full option details.

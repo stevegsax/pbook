@@ -1,5 +1,9 @@
-# pbook
-
++++
+title = "pbook"
+description = "Knowledge playbook service for LLM-assisted workflows"
+[cascade]
+type = "docs"
++++
 Prevent LLM agents from repeating mistakes by surfacing relevant, hard-won lessons at the moment they are needed
 
 **Audience**: Engineers integrating pbook into their projects or operating it as a service
@@ -31,14 +35,14 @@ working. Every entry must clear a strict quality bar: it must be **unexpected**
 specific advice that helps next time). Generic advice like "use proper error
 handling" is rejected. Specific advice like "Mistral OCR returns base64 with a
 `data:` URI prefix — strip it before decoding" is kept. See
-[why the quality bar exists](explanation/quality-bar.html) for the reasoning
+[why the quality bar exists](explanation/quality-bar/) for the reasoning
 behind this constraint.
 
 In practice, pbook runs as a Temporal worker alongside your project. Client
 workflows push experience data (what went wrong, how it was fixed), and pbook's
 extraction pipeline distills it into structured entries tagged by language,
 library, domain, and project. When the LLM needs context — writing new code or
-debugging a failure — the [retrieval system](explanation/retrieval-ranking.html)
+debugging a failure — the [retrieval system](explanation/retrieval-ranking/)
 ranks entries by tag overlap and intent mode, packing the most relevant ones
 within a token budget. The result is a focused playbook section injected into
 the LLM's context: not a summary of everything pbook knows, but the specific
@@ -53,9 +57,9 @@ and identifying experiences automatically via batch LLM analysis through forge.
 All three paths produce the same output: tagged, embedded playbook entries.
 
 All entries are managed through a
-[CLI](reference/cli.html) or [Temporal workflows](reference/workflows.html)
-and stored in a [SQLite database](reference/data-model.html) with
-[namespaced tags](reference/tags.html) for retrieval. Each entry carries a
+[CLI](reference/cli/) or [Temporal workflows](reference/workflows/)
+and stored in a [SQLite database](reference/data-model/) with
+[namespaced tags](reference/tags/) for retrieval. Each entry carries a
 vector embedding for semantic deduplication and similarity search, preventing
 the redundant entries that lead to context collapse.
 
@@ -63,16 +67,16 @@ The system includes a **feedback loop** inspired by ACE's helpfulness tracking.
 Every time entries are served in a retrieval result, the system records which
 entries were delivered. Clients can then report whether entries were helpful or
 harmful via `pbook feedback`. This feedback flows back into the
-[ranking algorithm](explanation/retrieval-ranking.html): entries with strong
+[ranking algorithm](explanation/retrieval-ranking/): entries with strong
 helpful ratios float higher, while consistently harmful entries sink. A
-[pruning mechanism](howto/manage-entries.html) flags entries that are
+[pruning mechanism](howto/manage-entries/) flags entries that are
 consistently harmful or never retrieved for human review. A scheduled
 **maintenance workflow** consolidates semantically similar entries using LLM
 merging, keeping the playbook lean without losing knowledge.
 
 ## Sections
 
-- [Tutorials](tutorials/index.html) — Learn by doing
-- [How-to Guides](howto/index.html) — Accomplish specific tasks
-- [Reference](reference/index.html) — Technical descriptions
-- [Explanation](explanation/index.html) — Background and context
+- [Explanation](explanation/) — Background, context, and design rationale
+- [Tutorials](tutorials/) — Guided lessons that walk through pbook end to end
+- [How-to Guides](howto/) — Task-focused recipes for operating pbook
+- [Reference](reference/) — Technical descriptions of interfaces, models, and workflows

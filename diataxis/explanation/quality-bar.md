@@ -1,5 +1,11 @@
-# Understanding the Quality Bar
-
++++
+title = "Understanding the Quality Bar"
+weight = 51
+description = "Pushing experience data and the LLM extraction pipeline"
+topic = "extraction"
+covers = ["Why the quality bar exists", "What 'unexpected + actionable' means in practice", "Why generic advice is excluded", "How the extraction prompt enforces quality", "The optimistic review model (needs-review tag)"]
+detail = "Discursive. This is the most important concept in pbook."
++++
 Playbook entries become LLM context. When a downstream workflow asks pbook for advice, the returned entries are injected directly into the system prompt that shapes code generation, debugging, and design decisions. This makes quality control a load-bearing concern, not a cosmetic one.
 
 A misleading entry is worse than no entry. If a playbook says "always pass `check_same_thread=False` to SQLite" without mentioning that this only matters in multi-threaded contexts, the LLM will apply it everywhere -- including single-threaded test harnesses where it masks real concurrency bugs. The advice was technically correct but contextually wrong, and the resulting error is almost impossible to trace back to the playbook entry that caused it.
@@ -37,8 +43,8 @@ This works because the extraction prompt enforces quality aggressively. The prom
 
 ## The extraction prompt
 
-The extraction prompt (see [Temporal workflows reference](../reference/workflows.md) for the full workflow) is built from the `build_extraction_system_prompt` function. It instructs the LLM to extract only entries that are both unexpected and actionable. Generic advice, standard rules, and expected outcomes are explicitly excluded.
+The extraction prompt (see [Temporal workflows reference](/reference/workflows/) for the full workflow) is built from the `build_extraction_system_prompt` function. It instructs the LLM to extract only entries that are both unexpected and actionable. Generic advice, standard rules, and expected outcomes are explicitly excluded.
 
 The prompt lists specific anti-patterns: "use proper error handling", "write tests", entries about normal behavior. It also lists positive signals: multiple retries, API quirks, standard patterns that break in specific contexts. This gives the extraction LLM a concrete decision boundary rather than a vague quality aspiration.
 
-The quality bar applies equally to direct submissions through the manual entry path. When a human submits an entry via `pbook add`, it goes through an LLM review that checks for duplicates, generic advice, and missing specificity. The review can reject entries or suggest improvements. See [how to push experience data](../howto/push-experience.md) for both ingestion paths.
+The quality bar applies equally to direct submissions through the manual entry path. When a human submits an entry via `pbook add`, it goes through an LLM review that checks for duplicates, generic advice, and missing specificity. The review can reject entries or suggest improvements. See [how to push experience data](/howto/push-experience/) for both ingestion paths.

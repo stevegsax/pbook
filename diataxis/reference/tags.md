@@ -1,5 +1,11 @@
-# Tag System Reference
-
++++
+title = "Tag System Reference"
+weight = 84
+description = "Namespaced tags and their role in retrieval"
+topic = "tags"
+covers = ["All five tag namespaces with valid values", "General vs extracted tier distinction", "Tag validation rules", "Tag inference from file extensions and keywords"]
+detail = "Tabular. One table per namespace with valid values and sources."
++++
 All tags use `namespace:value` format. Five namespaces are defined across two tiers.
 
 ## Namespaces
@@ -69,4 +75,4 @@ Tags must conform to `namespace:value` format. The following constraints apply:
 
 All functions are defined in `pbook.tags`.
 
-For how tags affect retrieval scoring, see [Retrieval Ranking](../explanation/retrieval-ranking.md). For practical tag usage in queries, see [How to Retrieve Entries](../howto/retrieve-entries.md).
+For how tags affect retrieval scoring, see [Retrieval Ranking](/explanation/retrieval-ranking/). For practical tag usage in queries, see [How to Retrieve Entries](/howto/retrieve-entries/).

@@ -1,5 +1,11 @@
-# Architecture and Design
-
++++
+title = "Architecture and Design"
+weight = 121
+description = "Design principles and system structure"
+topic = "architecture"
+covers = ["Why pbook has its own database and worker", "Why tags are namespaced with a controlled vocabulary", "The three ingestion paths (extraction, direct submission, transcript ingestion)", "Why embeddings for semantic deduplication and maintenance", "Function Core / Imperative Shell pattern", "How sax-llm provides LLM access", "Why transcript ingestion routes LLM calls through forge's batch API"]
+detail = "Discursive. Connect design decisions to the problems they solve."
++++
 pbook is a knowledge playbook service that stores curated advice and extracted pitfalls for LLM-assisted workflows. This document explains the design decisions behind its architecture.
 
 ## Why a separate database
@@ -26,7 +32,7 @@ Tags determine which entries surface during retrieval. A freeform tag system wou
 
 The two-tier design (general vs extracted) reflects different creation patterns. General tags like `lang:python` and `lib:sqlalchemy` are attached to curated advice that applies across projects. Extracted tags like `project:forge` and `pattern:failure-pattern` are attached to pitfalls specific to one codebase. The retrieval ranking system uses this tier distinction to weight results based on intent -- general knowledge for creation, project-specific knowledge for debugging.
 
-See [Tag System Reference](../reference/tags.md) for namespace definitions. See [Retrieval Ranking](retrieval-ranking.md) for how tags affect scoring.
+See [Tag System Reference](/reference/tags/) for namespace definitions. See [Retrieval Ranking](retrieval-ranking/) for how tags affect scoring.
 
 ## Two ingestion paths
 
@@ -72,4 +78,4 @@ The integration follows a cross-queue pattern. The `TranscriptIngestionWorkflow`
 
 Forge depends on pbook as a library (the same way both depend on sax-llm). Only pure functions are imported -- no database access, no Temporal activities cross the dependency boundary at import time. The cross-queue calls happen at runtime through Temporal's workflow system.
 
-See [data model reference](../reference/data-model.md) for the full model definitions and [Temporal workflows reference](../reference/workflows.md) for workflow and activity details.
+See [data model reference](/reference/data-model/) for the full model definitions and [Temporal workflows reference](/reference/workflows/) for workflow and activity details.

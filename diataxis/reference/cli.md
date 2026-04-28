@@ -1,5 +1,11 @@
-# CLI Reference
-
++++
+title = "CLI Reference"
+weight = 104
+description = "All pbook commands and their options"
+topic = "cli"
+covers = ["All pbook commands with synopsis (including pbook ingest)", "Options, arguments, and defaults for each command", "Exit codes and error handling"]
+detail = "One section per command. Synopsis, options table, example."
++++
 All commands are subcommands of `pbook`.
 
 ## pbook worker
@@ -18,7 +24,7 @@ pbook worker [--temporal-address ADDR]
 pbook worker --temporal-address localhost:7233
 ```
 
-For a guided introduction, see [Getting Started](../tutorials/getting-started.md).
+For a guided introduction, see [Getting Started](/tutorials/getting-started/).
 
 ## pbook list
 
@@ -40,7 +46,7 @@ pbook list [--tag TAG]... [--type TYPE] [--project PROJECT] [--limit N] [--json]
 pbook list --tag lang:python --tag domain:testing --limit 5
 ```
 
-For querying strategies, see [How to Retrieve Entries](../howto/retrieve-entries.md). For how tags affect ranking, see [Retrieval Ranking](../explanation/retrieval-ranking.md).
+For querying strategies, see [How to Retrieve Entries](/howto/retrieve-entries/). For how tags affect ranking, see [Retrieval Ranking](/explanation/retrieval-ranking/).
 
 ## pbook get
 
@@ -76,7 +82,7 @@ pbook add --file FILE [--schema]
 pbook add --file entry.json
 ```
 
-For workflow context, see [How to Manage Entries](../howto/manage-entries.md). For field definitions, see [Data Model Reference](data-model.md).
+For workflow context, see [How to Manage Entries](/howto/manage-entries/). For field definitions, see [Data Model Reference](data-model/).
 
 ## pbook update
 
@@ -111,7 +117,7 @@ pbook approve ENTRY_ID
 pbook approve 42
 ```
 
-For the review workflow, see [How to Manage Entries](../howto/manage-entries.md). For why entries need review, see [Understanding the Quality Bar](../explanation/quality-bar.md).
+For the review workflow, see [How to Manage Entries](/howto/manage-entries/). For why entries need review, see [Understanding the Quality Bar](/explanation/quality-bar/).
 
 ## pbook reject
 
@@ -163,7 +169,7 @@ pbook push --file FILE [--temporal-address ADDR]
 pbook push --file experience.json
 ```
 
-For experience data guidelines, see [How to Push Experience](../howto/push-experience.md). For input field definitions, see [Data Model Reference](data-model.md).
+For experience data guidelines, see [How to Push Experience](/howto/push-experience/). For input field definitions, see [Data Model Reference](data-model/).
 
 ## pbook ingest
 
@@ -190,7 +196,7 @@ pbook ingest --all --project forge
 pbook ingest ~/.claude/projects/<id>/session.jsonl
 ```
 
-For the ingestion workflow, see [How to Ingest Transcripts](../howto/ingest-transcripts.md). For how ingestion fits into the system, see [Architecture](../explanation/architecture.md).
+For the ingestion workflow, see [How to Ingest Transcripts](/howto/ingest-transcripts/). For how ingestion fits into the system, see [Architecture](/explanation/architecture/).
 
 ## pbook review
 
@@ -210,7 +216,7 @@ pbook review --limit 10
 
 ## pbook feedback
 
-Record feedback on a retrieved entry. Increments the entry's `helpful_count` or `harmful_count`, which affects future [retrieval ranking](../explanation/retrieval-ranking.md).
+Record feedback on a retrieved entry. Increments the entry's `helpful_count` or `harmful_count`, which affects future [retrieval ranking](/explanation/retrieval-ranking/).
 
 ```
 pbook feedback ENTRY_ID (--helpful | --harmful) [--context TEXT]
@@ -230,7 +236,7 @@ pbook feedback 42 --helpful
 pbook feedback 7 --harmful --context "Advice was outdated for v2 API"
 ```
 
-For how feedback affects scoring, see [Retrieval Ranking](../explanation/retrieval-ranking.md). For the input model, see [Data Model Reference](data-model.md#feedbackinput).
+For how feedback affects scoring, see [Retrieval Ranking](/explanation/retrieval-ranking/). For the input model, see [Data Model Reference](data-model/#feedbackinput).
 
 ## pbook prune
 
@@ -255,7 +261,7 @@ pbook prune --dry-run
 pbook prune --apply --min-retrievals 3 --max-harmful-ratio 0.6
 ```
 
-For the quality review workflow, see [How to Manage Entries](../howto/manage-entries.md).
+For the quality review workflow, see [How to Manage Entries](/howto/manage-entries/).
 
 ## pbook migrate
 

@@ -5,73 +5,6 @@ type = "project-docs"
 audience = "Engineers integrating pbook into their projects or operating it as a service"
 purpose = "Prevent LLM agents from repeating mistakes by surfacing relevant, hard-won lessons at the moment they are needed"
 prerequisites = "Python, Temporal basics, Pydantic, SQLAlchemy, CLI tools"
-introduction = """
-## Why pbook exists
-
-LLM agents repeat mistakes. When an agent encounters a library quirk, an
-undocumented API behavior, or a subtle configuration pitfall, the lesson
-disappears at the end of the session. The next invocation starts from scratch,
-makes the same wrong first attempt, and burns the same debugging cycles.
-
-This is the problem that **Agentic Context Engineering** addresses. Research
-(Zhang et al., "Agentic Context Engineering," ICLR 2026) demonstrates that
-treating an LLM's context as an evolving **playbook** — a structured collection
-of strategies, pitfalls, and domain-specific knowledge that accumulates over
-time — yields large improvements over static prompts. On agent benchmarks, the
-approach improved accuracy by 10.6% over strong baselines. The key insight is
-that contexts should function as comprehensive, detailed playbooks rather than
-compressed summaries. Monolithic context rewriting leads to **brevity bias**
-(collapsing toward generic advice) and **context collapse** (eroding detailed
-knowledge through iterative summarization). Structured, incremental updates
-avoid both failure modes.
-
-pbook is an implementation of this principle. It stores lessons extracted from
-real project experience and surfaces them at the moment they are relevant —
-giving the LLM the specific, hard-won knowledge it needs before it starts
-working. Every entry must clear a strict quality bar: it must be **unexpected**
-(the default approach would have been wrong) and **actionable** (there is
-specific advice that helps next time). Generic advice like "use proper error
-handling" is rejected. Specific advice like "Mistral OCR returns base64 with a
-`data:` URI prefix — strip it before decoding" is kept. See
-[why the quality bar exists](explanation/quality-bar.html) for the reasoning
-behind this constraint.
-
-In practice, pbook runs as a Temporal worker alongside your project. Client
-workflows push experience data (what went wrong, how it was fixed), and pbook's
-extraction pipeline distills it into structured entries tagged by language,
-library, domain, and project. When the LLM needs context — writing new code or
-debugging a failure — the [retrieval system](explanation/retrieval-ranking.html)
-ranks entries by tag overlap and intent mode, packing the most relevant ones
-within a token budget. The result is a focused playbook section injected into
-the LLM's context: not a summary of everything pbook knows, but the specific
-entries that match the current task.
-
-pbook supports three ingestion paths. **Experience extraction** takes structured
-problem/resolution reports and runs them through an LLM extraction pipeline.
-**Transcript ingestion** analyzes Claude Code conversation transcripts directly
--- scanning `~/.claude/projects/` to discover sessions, filtering out noise,
-and identifying experiences automatically via batch LLM analysis through forge.
-**Direct submission** lets humans add curated advice with LLM quality review.
-All three paths produce the same output: tagged, embedded playbook entries.
-
-All entries are managed through a
-[CLI](reference/cli.html) or [Temporal workflows](reference/workflows.html)
-and stored in a [SQLite database](reference/data-model.html) with
-[namespaced tags](reference/tags.html) for retrieval. Each entry carries a
-vector embedding for semantic deduplication and similarity search, preventing
-the redundant entries that lead to context collapse.
-
-The system includes a **feedback loop** inspired by ACE's helpfulness tracking.
-Every time entries are served in a retrieval result, the system records which
-entries were delivered. Clients can then report whether entries were helpful or
-harmful via `pbook feedback`. This feedback flows back into the
-[ranking algorithm](explanation/retrieval-ranking.html): entries with strong
-helpful ratios float higher, while consistently harmful entries sink. A
-[pruning mechanism](howto/manage-entries.html) flags entries that are
-consistently harmful or never retrieved for human review. A scheduled
-**maintenance workflow** consolidates semantically similar entries using LLM
-merging, keeping the playbook lean without losing knowledge.
-"""
 
 [topics.getting-started]
 title = "Getting Started"
@@ -210,7 +143,7 @@ unexpected. Link to reference/workflows.md for the extraction prompt."""
 title = "Transcript Ingestion"
 description = "Batch ingestion of Claude Code conversation transcripts"
 complexity = "intermediate"
-order = 5.5
+order = 6
 prerequisites = ["extraction"]
 
 [topics.ingestion.howto]
@@ -234,7 +167,7 @@ reference/cli.md for full option details."""
 title = "Claude Code Import Workflow"
 description = "End-to-end procedure for importing Claude Code conversations into pbook"
 complexity = "intermediate"
-order = 5.6
+order = 7
 prerequisites = ["ingestion"]
 
 [topics.import-workflow.howto]
@@ -266,7 +199,7 @@ the tone directive: 'Run this', 'Check that', not 'You might want to'."""
 title = "Tag System"
 description = "Namespaced tags and their role in retrieval"
 complexity = "beginner"
-order = 6
+order = 8
 
 [topics.tags.reference]
 file = "reference/tags.md"
@@ -286,7 +219,7 @@ for how tags affect ranking, and howto/retrieve-entries.md for practical usage."
 title = "Data Model"
 description = "Entry types, Pydantic models, and database schema"
 complexity = "intermediate"
-order = 7
+order = 9
 
 [topics.data-model.reference]
 file = "reference/data-model.md"
@@ -311,7 +244,7 @@ and explanation/retrieval-ranking.md for scoring context."""
 title = "CLI"
 description = "All pbook commands and their options"
 complexity = "beginner"
-order = 8
+order = 10
 
 [topics.cli.reference]
 file = "reference/cli.md"
@@ -331,7 +264,7 @@ howto/push-experience.md, and explanation/quality-bar.md as appropriate."""
 title = "Temporal Workflows"
 description = "Workflow definitions, activities, and integration"
 complexity = "advanced"
-order = 9
+order = 11
 prerequisites = ["retrieval", "extraction"]
 
 [topics.workflows.reference]
@@ -370,7 +303,7 @@ explanatory preamble. Link to reference/workflows.md for workflow details."""
 title = "Architecture"
 description = "Design principles and system structure"
 complexity = "intermediate"
-order = 10
+order = 12
 
 [topics.architecture.explanation]
 file = "explanation/architecture.md"

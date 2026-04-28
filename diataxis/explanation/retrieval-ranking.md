@@ -1,5 +1,11 @@
-# How Retrieval Ranking Works
-
++++
+title = "How Retrieval Ranking Works"
+weight = 41
+description = "Querying entries by tag with intent-based ranking"
+topic = "retrieval"
+covers = ["Why retrieval has two modes (create vs fix)", "How tag overlap scoring works", "How mode-based weighting affects ranking", "How helpfulness feedback adjusts ranking", "How token budget packing works", "Why entries are ranked, not just filtered"]
+detail = "Discursive. Connect the ranking design to the problem it solves."
++++
 When you query pbook with tags like `lang:python`, `lib:sqlalchemy`, `project:forge`, the store returns every entry that matches at least one of those tags. With a mature playbook, that could be 50 or more entries. The token budget for the downstream LLM prompt is finite -- typically 5,000 tokens. Only a subset of those entries will fit. The ranking system decides which entries make the cut.
 
 ## Why two modes
@@ -36,7 +42,7 @@ The 3-retrieval threshold prevents a single feedback report from dominating. An 
 
 This feedback loop is what makes the playbook self-improving. Generic entries that sounded good but never helped in practice gradually sink. Specific entries that consistently solve real problems float higher. Over time, the token budget fills with proven advice rather than untested entries.
 
-For how to provide feedback, see [How to Manage Entries](../howto/manage-entries.md). For pruning entries with poor feedback, see [pbook prune](../reference/cli.md#pbook-prune).
+For how to provide feedback, see [How to Manage Entries](/howto/manage-entries/). For pruning entries with poor feedback, see [pbook prune](/reference/cli/#pbook-prune).
 
 ## Token budget packing
 
@@ -54,4 +60,4 @@ A general entry tagged `lang:python, lib:sqlalchemy` might contain advice about 
 
 Ranking preserves all matching entries and uses mode only as a scoring signal. An entry tagged only `lang:python` still appears in fix mode results -- it just ranks lower than project-specific pitfalls, and may not fit in the token budget if there are enough higher-scoring entries. This is the right tradeoff: when the budget is tight, mode-relevant entries win; when the budget is generous, everything relevant gets included.
 
-See [tag namespaces](../reference/tags.md) for the full list of namespaces and how they map to tiers. See [how to retrieve entries](../howto/retrieve-entries.md) for CLI and workflow usage.
+See [tag namespaces](/reference/tags/) for the full list of namespaces and how they map to tiers. See [how to retrieve entries](/howto/retrieve-entries/) for CLI and workflow usage.

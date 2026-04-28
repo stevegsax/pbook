@@ -1,5 +1,11 @@
-# How to Import Claude Code Conversations into pbook
-
++++
+title = "How to Import Claude Code Conversations into pbook"
+weight = 73
+description = "End-to-end procedure for importing Claude Code conversations into pbook"
+topic = "import-workflow"
+covers = ["Starting the required services (Temporal, forge worker, pbook worker)", "Discovering Claude Code sessions with dry-run", "Running the batch import", "Reviewing extracted entries", "Handling import failures and re-running"]
+detail = "End-to-end workflow walkthrough. Ordered steps that take the reader from zero to extracted entries in the playbook. Assume the reader already has pbook and forge installed."
++++
 This guide walks through the full procedure for importing Claude Code conversation transcripts into pbook. The import runs as a batch job: pbook discovers session files under `~/.claude/projects/`, forge analyzes each transcript via its batch LLM API, and pbook extracts the identified experiences into playbook entries.
 
 The procedure requires three services running in parallel: a Temporal server, a forge worker, and a pbook worker. Each gets its own terminal.
@@ -31,7 +37,7 @@ cd ~/repos-sax/forge
 ANTHROPIC_API_KEY=sk-ant-... uv run forge worker
 ```
 
-Wait for the log line `forge worker starting on queue forge-task-queue`. This worker handles the batch LLM calls that analyze each transcript. See [architecture](../explanation/architecture.md) for why forge handles this step.
+Wait for the log line `forge worker starting on queue forge-task-queue`. This worker handles the batch LLM calls that analyze each transcript. See [architecture](/explanation/architecture/) for why forge handles this step.
 
 ## Step 3: Start the pbook worker
 
@@ -111,7 +117,7 @@ Reject low-quality or misleading entries:
 uv run pbook reject 43
 ```
 
-See [Understanding the Quality Bar](../explanation/quality-bar.md) for what makes an entry worth keeping.
+See [Understanding the Quality Bar](/explanation/quality-bar/) for what makes an entry worth keeping.
 
 ## Step 7: Verify the results
 
@@ -147,4 +153,4 @@ If the forge worker crashes or loses a batch result, the failed `TranscriptInges
 
 If a session produces no usable experiences, it is still recorded in `ingested_sessions` with `experiences_found=0` to prevent reprocessing. Use `--force` to retry if the analysis prompt has improved.
 
-See [CLI reference](../reference/cli.md#pbook-ingest) for full command options. See [ingest-transcripts](ingest-transcripts.md) for task-focused CLI examples.
+See [CLI reference](/reference/cli/#pbook-ingest) for full command options. See [ingest-transcripts](ingest-transcripts/) for task-focused CLI examples.

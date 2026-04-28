@@ -1,5 +1,11 @@
-# Temporal Workflows Reference
-
++++
+title = "Temporal Workflows Reference"
+weight = 114
+description = "Workflow definitions, activities, and integration"
+topic = "workflows"
+covers = ["RetrievalWorkflow input/output and steps (including retrieval recording)", "ExtractionWorkflow input/output and steps (including embedding generation)", "ManualEntryWorkflow input/output and steps (including embedding and semantic dedup)", "MaintenanceWorkflow input/output and steps (pruning and consolidation)", "ExportWorkflow input/output and steps", "TranscriptIngestionWorkflow and BatchIngestionWorkflow (forge-side, cross-queue)", "All activities with their parameters and timeouts", "Task queue name and cross-queue interaction with forge"]
+detail = "Step-by-step for each workflow. Activity table with timeouts."
++++
 ## Task queues
 
 Most workflows and activities run on `pbook-task-queue`. The transcript ingestion workflows (TranscriptIngestionWorkflow, BatchIngestionWorkflow) run on `forge-task-queue` and call back into pbook-task-queue for extraction and persistence.
@@ -17,9 +23,9 @@ Fetch, rank, and pack playbook entries within a token budget.
 | 2    | (in-workflow)            | --      | --        | Rank by score and pack within token budget         |
 | 3    | `record_retrieval_event` | 10s     | --        | Record which entries were served (best-effort)     |
 
-Step 3 is non-blocking -- if it fails, the retrieval result is still returned. The recorded retrieval counts feed into helpfulness-aware ranking. See [Retrieval Ranking](../explanation/retrieval-ranking.md) for details.
+Step 3 is non-blocking -- if it fails, the retrieval result is still returned. The recorded retrieval counts feed into helpfulness-aware ranking. See [Retrieval Ranking](/explanation/retrieval-ranking/) for details.
 
-For usage, see [How to Retrieve Entries](../howto/retrieve-entries.md). For input/output field definitions, see [Data Model Reference](data-model.md).
+For usage, see [How to Retrieve Entries](/howto/retrieve-entries/). For input/output field definitions, see [Data Model Reference](data-model/).
 
 ## ExtractionWorkflow
 
@@ -56,7 +62,7 @@ Validate, review via LLM, and save a manually submitted playbook entry.
 
 Returns early with `approved=False` if validation fails (step 1) or the LLM rejects the entry (step 5). Steps 2-3 provide the reviewer with semantic duplicate context to prevent context collapse.
 
-For usage, see [How to Manage Entries](../howto/manage-entries.md). For the quality review model, see [Understanding the Quality Bar](../explanation/quality-bar.md).
+For usage, see [How to Manage Entries](/howto/manage-entries/). For the quality review model, see [Understanding the Quality Bar](/explanation/quality-bar/).
 
 ## ExportWorkflow
 
@@ -107,7 +113,7 @@ Analyze a single Claude Code transcript and extract playbook entries. Runs on **
 
 Step 2 uses forge's batch dispatch: the workflow submits a request, waits for the BatchPollerWorkflow to signal completion. Step 3 calls pbook's existing ExtractionWorkflow on pbook-task-queue.
 
-For usage, see [How to Ingest Transcripts](../howto/ingest-transcripts.md).
+For usage, see [How to Ingest Transcripts](/howto/ingest-transcripts/).
 
 ## BatchIngestionWorkflow
 
@@ -121,7 +127,7 @@ Fan out to process multiple transcript sessions in parallel. Runs on forge's tas
 | 1    | (fan-out)  | --      | Start child TranscriptIngestionWorkflow per session   |
 | 2    | (gather)   | --      | Await all child results                              |
 
-For usage, see [How to Ingest Transcripts](../howto/ingest-transcripts.md).
+For usage, see [How to Ingest Transcripts](/howto/ingest-transcripts/).
 
 ## Activity summary
 

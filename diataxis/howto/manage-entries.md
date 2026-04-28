@@ -1,5 +1,11 @@
-# How to Manage Playbook Entries
-
++++
+title = "How to Manage Playbook Entries"
+weight = 33
+description = "Adding, updating, reviewing, and removing playbook entries"
+topic = "entries"
+covers = ["How to add a curated advice entry", "How to check for duplicates before adding", "How to update an existing entry", "How to review and approve extracted entries", "How to reject a low-quality entry", "How to record feedback on retrieved entries", "How to identify and prune harmful or stale entries"]
+detail = "Task-focused, no teaching. Assume the reader has completed the tutorial."
++++
 ## How to add a curated advice entry
 
 Create a JSON file conforming to the `PlaybookEntry` schema:
@@ -25,7 +31,7 @@ To print the full JSON schema for reference:
 pbook add --schema
 ```
 
-See [CLI reference](../reference/cli.md) for all `add` options. See [data model reference](../reference/data-model.md) for field definitions and valid `entry_type` values (`curated`, `pitfall`).
+See [CLI reference](/reference/cli/) for all `add` options. See [data model reference](/reference/data-model/) for field definitions and valid `entry_type` values (`curated`, `pitfall`).
 
 ## How to check for duplicates before adding
 
@@ -64,7 +70,7 @@ Apply the update by entry ID:
 pbook update 1 --file updates.json
 ```
 
-Tag validation runs on updated tags. See [CLI Reference](../reference/cli.md) for details.
+Tag validation runs on updated tags. See [CLI Reference](/reference/cli/) for details.
 
 ## How to review and approve extracted entries
 
@@ -92,9 +98,9 @@ pbook reject 3
 
 This permanently deletes the entry from the database. Rejection is irreversible -- the experience data that produced the entry is not stored separately and cannot be re-extracted.
 
-See [CLI reference](../reference/cli.md) for all review-related commands.
+See [CLI reference](/reference/cli/) for all review-related commands.
 
-For why entries need review, see [Understanding the Quality Bar](../explanation/quality-bar.md).
+For why entries need review, see [Understanding the Quality Bar](/explanation/quality-bar/).
 
 ## How to record feedback on retrieved entries
 
@@ -105,9 +111,9 @@ pbook feedback 42 --helpful
 pbook feedback 7 --harmful --context "Advice was outdated for v2 API"
 ```
 
-Feedback is cumulative -- the same entry can receive multiple helpful and harmful reports over time. These counters adjust the entry's [retrieval ranking](../explanation/retrieval-ranking.md): entries with strong helpful ratios rank higher in future results, while harmful entries sink.
+Feedback is cumulative -- the same entry can receive multiple helpful and harmful reports over time. These counters adjust the entry's [retrieval ranking](/explanation/retrieval-ranking/): entries with strong helpful ratios rank higher in future results, while harmful entries sink.
 
-See [CLI reference](../reference/cli.md#pbook-feedback) for all options.
+See [CLI reference](/reference/cli/#pbook-feedback) for all options.
 
 ## How to identify and prune harmful or stale entries
 
@@ -131,4 +137,4 @@ Adjust thresholds as needed:
 pbook prune --apply --min-retrievals 3 --max-harmful-ratio 0.6 --max-stale-days 90
 ```
 
-See [CLI reference](../reference/cli.md#pbook-prune) for all options.
+See [CLI reference](/reference/cli/#pbook-prune) for all options.
