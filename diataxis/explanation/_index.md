@@ -8,3 +8,4 @@ Explanation documents discuss the why — the reasoning, design decisions, and t
 - [How Retrieval Ranking Works](retrieval-ranking/) — why retrieval has two modes, how tag overlap and feedback feed into scoring, and why entries are ranked rather than just filtered.
 - [Understanding the Quality Bar](quality-bar/) — the "unexpected + actionable" principle, why generic advice is excluded, and how the extraction prompt enforces it.
 - [Architecture and Design](architecture/) — why pbook has its own database and Temporal worker, why tags are namespaced, and why transcript ingestion routes through forge's batch API.
+- [How the Feedback Signal Is Processed](feedback/) — when `pbook feedback` writes to disk, when ranking sees the signal, why the 3-retrieval threshold gates it, and how the loop ranks fresh per query.

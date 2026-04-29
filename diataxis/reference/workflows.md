@@ -12,20 +12,43 @@ Most workflows and activities run on `pbook-task-queue`. The transcript ingestio
 
 ## RetrievalWorkflow
 
-Fetch, rank, and pack playbook entries within a token budget.
+Fetch, rank, and pack playbook entries within a token budget. Supports both tag-only retrieval (the original path, used by forge) and free-text semantic search (used by `pbook search` and the skill substrate).
 
 - **Input:** `RetrievalInput`
 - **Output:** `RetrievalResult`
 
-| Step | Activity                 | Timeout | Heartbeat | Description                                       |
-|------|--------------------------|---------|-----------|---------------------------------------------------|
-| 1    | `fetch_candidates`       | 30s     | --        | Query store for entries matching tags              |
-| 2    | (in-workflow)            | --      | --        | Rank by score and pack within token budget         |
-| 3    | `record_retrieval_event` | 10s     | --        | Record which entries were served (best-effort)     |
+When `RetrievalInput.query` is empty (tag-only path):
 
-Step 3 is non-blocking -- if it fails, the retrieval result is still returned. The recorded retrieval counts feed into helpfulness-aware ranking. See [Retrieval Ranking](/explanation/retrieval-ranking/) for details.
+| Step | Activity                 | Timeout | Heartbeat | Description                                                  |
+|------|--------------------------|---------|-----------|--------------------------------------------------------------|
+| 1    | `fetch_candidates`       | 30s     | --        | Query store for entries matching tags                        |
+| 2    | (in-workflow)            | --      | --        | Rank by tag overlap + mode boost; pack within token budget   |
+| 3    | `record_retrieval_event` | 10s     | --        | Record which entries were served (best-effort)               |
 
-For usage, see [How to Retrieve Entries](/howto/retrieve-entries/). For input/output field definitions, see [Data Model Reference](data-model/).
+When `RetrievalInput.query` is non-empty (semantic-primary path):
+
+| Step | Activity                 | Timeout | Heartbeat | Description                                                                                  |
+|------|--------------------------|---------|-----------|----------------------------------------------------------------------------------------------|
+| 1    | `fetch_candidates`       | 30s     | --        | Query-only path: pull up to 200 candidates with embeddings (filtered by approval/rejected)   |
+| 2    | `llm_embed`              | 60s     | --        | Embed the query string                                                                       |
+| 3    | `compute_similarities`   | 30s     | --        | Compute cosine similarity per candidate (numpy is sandbox-unsafe in workflow body)           |
+| 4    | (in-workflow)            | --      | --        | Rank semantic-primary (tag overlap as tiebreaker), apply `threshold`, pack within budget     |
+| 5    | `record_retrieval_event` | 10s     | --        | Record which entries were served (best-effort)                                               |
+
+Each entry in the packed `RetrievalResult.entries` carries a `similarity` field on the semantic-primary path. Rejected entries are excluded from candidates by default; pass `include_rejected=True` to surface them. The recording step is non-blocking — if it fails, the retrieval result is still returned. The recorded retrieval counts feed into helpfulness-aware ranking. See [Retrieval Ranking](/explanation/retrieval-ranking/) for details.
+
+For usage, see [How to Retrieve Entries](/howto/retrieve-entries/). For free-text search composition, see [Use as Skill Substrate](/howto/use-as-skill-substrate/). For input/output field definitions, see [Data Model Reference](/reference/data-model/).
+
+## Generic LLM workflow steps
+
+Every LLM call in pbook (extraction, review, consolidation, embedding) goes through one of two generic activities:
+
+| Activity                | Module                       | Description                                                                  |
+|-------------------------|------------------------------|------------------------------------------------------------------------------|
+| `llm_chat`              | `pbook.workflow_steps.llm`   | Structured-output chat. Resolves the output type by name from a registry.    |
+| `llm_embed`             | `pbook.workflow_steps.embeddings` | Compute a float32 embedding for `text`, returned as base64.             |
+
+Workflows resolve their model in workflow body via `pbook.models.resolve_model(...)` and pass it to `llm_chat`. The output-type registry is populated at worker startup via `pbook.worker._register_output_types()` — adding a new structured output type to the system means registering it there, otherwise `llm_chat` raises `KeyError`. Per-purpose activities (`extract_from_experience`, `review_entry`, `consolidate_entries_llm`) are gone — their LLM portions all flow through `llm_chat`.
 
 ## ExtractionWorkflow
 
@@ -34,15 +57,16 @@ Extract lessons from pushed experience data via LLM.
 - **Input:** JSON `{"experiences": [...], "project": "..."}`
 - **Output:** `{"entries_created": int}`
 
-| Step | Activity                   | Timeout | Heartbeat | Description                              |
-|------|----------------------------|---------|-----------|------------------------------------------|
-| 1    | `extract_from_experience`  | 5m      | 60s       | Call extraction LLM with experience data |
-| 2    | `compute_embedding`        | 60s     | --        | Generate vector embedding for each entry |
-| 3    | `save_extracted_entries`   | 30s     | --        | Save entries with `needs_review=True`    |
+For each experience in turn:
 
-Step 2 runs once per extracted entry. Embeddings are stored alongside the entry for semantic deduplication.
+| Step | Activity                 | Timeout | Heartbeat | Description                                                              |
+|------|--------------------------|---------|-----------|--------------------------------------------------------------------------|
+| 1    | `llm_chat`               | 5m      | 60s       | Extraction prompt → `ExtractionResult`                                   |
+| 2    | `llm_embed`              | 60s     | --        | Embed each candidate entry                                               |
+| 3    | `llm_embed`              | 60s     | --        | Embed the situation excerpt (if present)                                 |
+| 4    | `save_extracted_entries` | 30s     | --        | Match-or-attach: insert new entries, attach sources to existing matches  |
 
-All saved entries have `entry_type=pitfall` and `needs_review=True`.
+Step 4 implements the match-or-attach contract: if a candidate's embedding matches an existing entry above the entry-match threshold (`0.85`), the existing entry gains a new `entry_sources` row instead of a duplicate entry; if not, the candidate is inserted. Source rows are themselves deduplicated against existing rows on the same entry above the source-dedup threshold (`0.92`). Newly inserted entries land with `entry_type=pitfall` and `needs_review=True`.
 
 ## ManualEntryWorkflow
 
@@ -51,16 +75,17 @@ Validate, review via LLM, and save a manually submitted playbook entry.
 - **Input:** PlaybookEntry JSON
 - **Output:** `{"approved": bool, "entry": dict, ...}`
 
-| Step | Activity                 | Timeout | Heartbeat | Description                                |
-|------|--------------------------|---------|-----------|----------------------------------------------|
-| 1    | `validate_entry`         | 30s     | --        | Parse and validate against PlaybookEntry schema |
-| 2    | `compute_embedding`      | 60s     | --        | Generate vector embedding for the proposed entry |
-| 3    | `find_duplicates`        | 30s     | --        | Semantic duplicate detection via embedding similarity |
-| 4    | `fetch_existing_entries`  | 30s     | --        | Fetch recent entries for broader review context |
-| 5    | `review_entry`           | 2m      | 60s       | LLM review for accuracy, specificity, minimality, duplication |
-| 6    | `save_extracted_entries`  | 30s     | --        | Save the reviewed entry                    |
+| Step | Activity                 | Timeout | Heartbeat | Description                                                  |
+|------|--------------------------|---------|-----------|--------------------------------------------------------------|
+| 1    | `validate_entry`         | 30s     | --        | Parse and validate against PlaybookEntry schema              |
+| 2    | `llm_embed`              | 60s     | --        | Embed the proposed entry                                     |
+| 3    | `find_duplicates`        | 30s     | --        | Semantic duplicate detection via embedding similarity        |
+| 4    | `fetch_existing_entries` | 30s     | --        | Fetch recent entries for broader review context              |
+| 5    | `llm_chat`               | 2m      | 60s       | Review prompt → `ReviewResult`                               |
+| 6    | (in-workflow)            | --      | --        | Apply review suggestions to the entry                        |
+| 7    | `save_extracted_entries` | 30s     | --        | Save the reviewed entry                                      |
 
-Returns early with `approved=False` if validation fails (step 1) or the LLM rejects the entry (step 5). Steps 2-3 provide the reviewer with semantic duplicate context to prevent context collapse.
+Returns early with `approved=False` if validation fails (step 1) or the LLM rejects the entry (step 5). Steps 2–3 provide the reviewer with semantic duplicate context to prevent context collapse.
 
 For usage, see [How to Manage Entries](/howto/manage-entries/). For the quality review model, see [Understanding the Quality Bar](/explanation/quality-bar/).
 
@@ -84,18 +109,18 @@ Prune stale/harmful entries and consolidate semantically similar entries.
 - **Input:** none (designed for cron scheduling)
 - **Output:** `{"pruned": int, "consolidated": int, "clusters_found": int}`
 
-| Step | Activity                            | Timeout | Heartbeat | Description                                     |
-|------|-------------------------------------|---------|-----------|-------------------------------------------------|
-| 1    | `fetch_all_entries_for_maintenance` | 60s     | --        | Fetch all entries with feedback counters         |
-| 2    | (in-workflow)                       | --      | --        | Identify prune candidates (harmful ratio, stale) |
-| 3    | `prune_entries`                     | 60s     | --        | Delete flagged entries                           |
-| 4    | (in-workflow)                       | --      | --        | Group remaining entries by embedding similarity  |
-| 5    | `consolidate_entries_llm`           | 5m      | --        | LLM merges each cluster into one entry           |
-| 6    | `compute_embedding`                 | 60s     | --        | Generate embedding for the merged entry          |
-| 7    | `save_extracted_entries`            | 30s     | --        | Save merged entry                                |
-| 8    | `prune_entries`                     | 60s     | --        | Delete original cluster entries                  |
+| Step | Activity                            | Timeout | Heartbeat | Description                                                                       |
+|------|-------------------------------------|---------|-----------|-----------------------------------------------------------------------------------|
+| 1    | `fetch_all_entries_for_maintenance` | 60s     | --        | Fetch all entries with feedback counters                                          |
+| 2    | (in-workflow)                       | --      | --        | Identify prune candidates (harmful ratio, stale)                                  |
+| 3    | `prune_entries`                     | 60s     | --        | Delete flagged entries                                                            |
+| 4    | (in-workflow)                       | --      | --        | Group remaining entries by embedding similarity                                   |
+| 5    | `llm_chat`                          | 5m      | 60s       | Consolidation prompt → `ConsolidationResult` (one merged entry per cluster)       |
+| 6    | `llm_embed`                         | 60s     | --        | Generate embedding for the merged entry                                           |
+| 7    | `save_consolidated_entry`           | 30s     | --        | Insert the merged entry **and re-parent the cluster's `entry_sources` rows** to it |
+| 8    | `prune_entries`                     | 60s     | --        | Delete the original cluster entries                                               |
 
-Steps 5-8 repeat for each cluster. Consolidation prevents context collapse by merging redundant entries while preserving all unique insights.
+Steps 5–8 repeat for each cluster. Step 7 is distinct from `save_extracted_entries`: it deliberately bypasses match-or-attach (the merged entry is meant to *replace* the cluster, not match against it) and re-parents every `entry_sources` row from the merged-away entries to the survivor before step 8 deletes the originals — otherwise the cascade would drop the source provenance. Consolidation prevents context collapse by merging redundant entries while preserving all unique insights, and the source-row reparenting preserves the discuss-flow trace.
 
 ## TranscriptIngestionWorkflow
 
@@ -131,20 +156,24 @@ For usage, see [How to Ingest Transcripts](/howto/ingest-transcripts/).
 
 ## Activity summary
 
-| Activity                            | Module                        | LLM Call | Database | Timeout |
-|-------------------------------------|-------------------------------|----------|----------|---------|
-| `fetch_candidates`                  | `pbook.activities.retrieval`  | No       | Read     | 30s     |
-| `record_retrieval_event`            | `pbook.activities.retrieval`  | No       | Write    | 10s     |
-| `extract_from_experience`           | `pbook.activities.extraction` | Yes      | None     | 5m      |
-| `compute_embedding`                 | `pbook.activities.extraction` | No       | None     | 60s     |
-| `save_extracted_entries`            | `pbook.activities.extraction` | No       | Write    | 30s     |
-| `validate_entry`                    | `pbook.activities.review`     | No       | None     | 30s     |
-| `fetch_existing_entries`            | `pbook.activities.review`     | No       | Read     | 30s     |
-| `find_duplicates`                   | `pbook.activities.review`     | No       | Read     | 30s     |
-| `review_entry`                      | `pbook.activities.review`     | Yes      | None     | 2m      |
-| `fetch_all_entries_for_maintenance` | `pbook.activities.maintenance`| No       | Read     | 60s     |
-| `prune_entries`                     | `pbook.activities.maintenance`| No       | Write    | 60s     |
-| `consolidate_entries_llm`           | `pbook.activities.maintenance`| Yes      | None     | 5m      |
+| Activity                            | Module                              | LLM Call | Database | Timeout |
+|-------------------------------------|-------------------------------------|----------|----------|---------|
+| `llm_chat`                          | `pbook.workflow_steps.llm`          | Yes      | None     | varies (caller sets) |
+| `llm_embed`                         | `pbook.workflow_steps.embeddings`   | Yes (embedding) | None | 60s   |
+| `fetch_candidates`                  | `pbook.activities.retrieval`        | No       | Read     | 30s     |
+| `compute_similarities`              | `pbook.activities.retrieval`        | No       | None     | 30s     |
+| `record_retrieval_event`            | `pbook.activities.retrieval`        | No       | Write    | 10s     |
+| `save_extracted_entries`            | `pbook.activities.extraction`       | No       | Write    | 30s     |
+| `record_ingested_session`           | `pbook.activities.extraction`       | No       | Write    | 30s     |
+| `record_ingested_session_error`     | `pbook.activities.extraction`       | No       | Write    | 30s     |
+| `validate_entry`                    | `pbook.activities.review`           | No       | None     | 30s     |
+| `fetch_existing_entries`            | `pbook.activities.review`           | No       | Read     | 30s     |
+| `find_duplicates`                   | `pbook.activities.review`           | No       | Read     | 30s     |
+| `fetch_all_entries_for_maintenance` | `pbook.activities.maintenance`      | No       | Read     | 60s     |
+| `prune_entries`                     | `pbook.activities.maintenance`      | No       | Write    | 60s     |
+| `save_consolidated_entry`           | `pbook.activities.maintenance`      | No       | Write    | 30s     |
+| `fetch_entry_ids`                   | `pbook.activities.export`           | No       | Read     | 30s     |
+| `export_single_entry`               | `pbook.activities.export`           | No       | Read     | 30s     |
 | `fetch_entry_ids`                   | `pbook.activities.export`     | No       | Read     | 30s     |
 | `export_single_entry`              | `pbook.activities.export`     | No       | Read     | 30s     |
 | `prepare_transcript`               | `forge.activities.ingestion`  | No       | Read     | 120s    |

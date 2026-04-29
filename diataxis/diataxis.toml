@@ -45,20 +45,26 @@ order = 3
 file = "howto/manage-entries.md"
 status = "draft"
 covers = [
-    "How to add a curated advice entry",
+    "How to add a curated advice entry (stdin or --file)",
     "How to check for duplicates before adding",
     "How to update an existing entry",
     "How to review and approve extracted entries",
-    "How to reject a low-quality entry",
+    "How to soft-reject a low-quality entry with an optional reason",
     "How to record feedback on retrieved entries",
     "How to identify and prune harmful or stale entries",
+    "How to surface rejected entries with --include-rejected",
 ]
 detail = "Task-focused, no teaching. Assume the reader has completed the tutorial."
 guidance = """Each task is a separate headed section. Include the CLI command \
-and a minimal JSON example. Link to reference/cli.md for full option lists. \
-Link to reference/data-model.md for field details. The feedback and pruning \
-sections should be brief and directive — show the command, mention the effect \
-on ranking, and link to explanation/retrieval-ranking.md for details."""
+and a minimal JSON example. Reject is soft-mark, not delete: the row stays \
+for audit, --reason is optional, and default queries hide rejected entries. \
+Show how to recover or audit rejected entries via --include-rejected. \
+Show the stdin form for `pbook add` (echo … | pbook add --json) since that \
+is the natural shape for shell pipelines. Link to reference/cli.md for full \
+option lists. Link to reference/data-model.md for the rejected column. The \
+feedback and pruning sections should be brief and directive — show the \
+command, mention the effect on ranking, and link to \
+explanation/retrieval-ranking.md for details."""
 
 [topics.retrieval]
 title = "Retrieval and Ranking"
@@ -92,6 +98,8 @@ covers = [
     "How helpfulness feedback adjusts ranking",
     "How token budget packing works",
     "Why entries are ranked, not just filtered",
+    "How free-text queries trigger semantic-primary ranking",
+    "Why semantic similarity is computed in an activity (sandbox safety)",
 ]
 detail = "Discursive. Connect the ranking design to the problem it solves."
 guidance = """Explain the intuition: when writing new code you want best \
@@ -100,7 +108,12 @@ algorithm is a means to this end, not the point. Include a section on \
 helpfulness-aware scoring: entries with feedback counters get boosted or \
 penalized based on their helpful/harmful ratio, but only after a minimum \
 retrieval threshold (3). Connect this to the ACE paper's insight that \
-playbooks should evolve based on usage signals. Link to \
+playbooks should evolve based on usage signals. Add a section on free-text \
+queries: when RetrievalInput.query is non-empty, the workflow embeds the \
+query, computes cosine similarity for each candidate in a separate activity \
+(numpy in the workflow body breaks Temporal's determinism sandbox), and \
+sorts semantic-primary with tag-overlap as tiebreaker. Mention that rejected \
+entries are excluded from retrieval by default. Link to \
 reference/data-model.md for tag namespace details."""
 
 [topics.extraction]
@@ -225,20 +238,34 @@ order = 9
 file = "reference/data-model.md"
 status = "draft"
 covers = [
-    "PlaybookEntry model with all fields (including embedding and feedback counters)",
+    "PlaybookEntry model with all fields (including embedding, feedback counters, rejected, rejection_reason)",
     "FeedbackInput model",
     "PushExperienceInput model",
-    "RetrievalInput and RetrievalResult models",
+    "RetrievalInput (with query, threshold, include_rejected) and RetrievalResult (with similarity per entry) models",
     "EntryType enum values",
-    "Database schema (entries table with embedding and feedback counters)",
+    "Database schema (entries table with embedding, feedback counters, rejected/rejection_reason)",
+    "entry_sources table (provenance: session_id, project_name, experience_hash, source_context, source_context_embedding)",
     "Ingested sessions tracking table (ingested_sessions)",
     "SessionInfo model for transcript discovery",
+    "JSON output contract (parsed tags, ISO 8601 datetimes, error envelope)",
 ]
 detail = "Tabular. Field name, type, default, description for each model."
 guidance = """Mirror the Pydantic model structure. Use tables for fields. \
 Include short illustrative examples (1-3 lines JSON) for each entry type. \
-Cross-link to howto/manage-entries.md for usage, tags.md for tag namespaces, \
-and explanation/retrieval-ranking.md for scoring context."""
+Document the entry_sources join table — its purpose (provenance for \
+'discuss this play' flows), its UNIQUE (entry_id, session_id, \
+experience_hash) constraint, and the experience-level granularity that \
+lets one session contribute multiple distinct situations. Document the \
+soft-rejection columns (rejected bool, rejection_reason text) and call \
+out that default queries filter rejected=true. Document the new \
+RetrievalInput fields (query, threshold, include_rejected) and the \
+similarity field that appears on result entries when query is set. \
+Add a JSON contract section: tags emitted as a parsed list (not the raw \
+tags_json string), datetimes as ISO 8601 with timezone, embeddings \
+stripped from output, error envelope is {error, code} on stdout with \
+non-zero exit when --json is set. Cross-link to howto/manage-entries.md \
+for usage, tags.md for tag namespaces, and explanation/retrieval-ranking.md \
+for scoring context."""
 
 [topics.cli]
 title = "CLI"
@@ -250,15 +277,27 @@ order = 10
 file = "reference/cli.md"
 status = "draft"
 covers = [
-    "All pbook commands with synopsis (including pbook ingest)",
+    "All pbook commands with synopsis: list, get, search, sources, session-text, tags, add (stdin/--file), update, approve, reject (--reason), review, sessions, feedback, push, ingest, prune, migrate, worker, skill-prompt",
     "Options, arguments, and defaults for each command",
-    "Exit codes and error handling",
+    "JSON contract: --json emits structured payloads with parsed tags, ISO 8601 datetimes, and {error, code} envelope on failure",
+    "Exit codes (0 = success, non-zero = failure; specific reasons via JSON `code` field)",
 ]
 detail = "One section per command. Synopsis, options table, example."
 guidance = """Use consistent formatting: synopsis, then options table, then \
-brief example. Cross-link every command to the relevant how-to guide and \
-explanation page. Link to howto/manage-entries.md, howto/retrieve-entries.md, \
-howto/push-experience.md, and explanation/quality-bar.md as appropriate."""
+brief example. Document all current commands, including the read commands \
+added for skill-substrate use (search, sources, session-text, tags) and \
+skill-prompt (returns the editorial guidance payload that consumers like \
+/skill-creator ingest). Note that `pbook reject` is soft-mark, not delete \
+— it sets rejected=true and persists rejection_reason; the row survives \
+for audit. Show the stdin form for `pbook add`. Document the JSON contract \
+in a top-level section before the per-command sections: parsed tags, ISO \
+8601 datetimes, {error, code} envelope on stdout when --json is set. \
+Specific error codes used: not_found, validation_error, db_disabled, \
+tag_invalid, worker_unavailable, session_file_missing. Cross-link every \
+command to the relevant how-to guide and explanation page. Link to \
+howto/manage-entries.md, howto/retrieve-entries.md, \
+howto/use-as-skill-substrate.md, howto/push-experience.md, and \
+explanation/quality-bar.md as appropriate."""
 
 [topics.workflows]
 title = "Temporal Workflows"
@@ -271,19 +310,31 @@ prerequisites = ["retrieval", "extraction"]
 file = "reference/workflows.md"
 status = "draft"
 covers = [
-    "RetrievalWorkflow input/output and steps (including retrieval recording)",
-    "ExtractionWorkflow input/output and steps (including embedding generation)",
-    "ManualEntryWorkflow input/output and steps (including embedding and semantic dedup)",
-    "MaintenanceWorkflow input/output and steps (pruning and consolidation)",
+    "RetrievalWorkflow input/output and steps (tag-only and free-text query paths, semantic-primary ranking, retrieval recording)",
+    "ExtractionWorkflow input/output and steps (LLM extraction, embedding, match-or-attach save)",
+    "ManualEntryWorkflow input/output and steps (validation, embedding, LLM review, save)",
+    "MaintenanceWorkflow input/output and steps (pruning and LLM-driven consolidation with entry_sources reparenting)",
     "ExportWorkflow input/output and steps",
-    "TranscriptIngestionWorkflow and BatchIngestionWorkflow (forge-side, cross-queue)",
+    "TranscriptIngestionWorkflow and BatchIngestionWorkflow (forge-side, cross-queue, lifecycle callbacks)",
+    "Generic workflow steps: llm_chat, llm_embed, compute_similarities (numpy out of workflow body)",
     "All activities with their parameters and timeouts",
     "Task queue name and cross-queue interaction with forge",
 ]
 detail = "Step-by-step for each workflow. Activity table with timeouts."
 guidance = """Use consistent formatting per workflow: input model, output \
 model, numbered steps with timeout. Activity summary table at the end. \
-Cross-link to howto/retrieve-entries.md, howto/push-experience.md, \
+Document the new RetrievalWorkflow steps when query is non-empty: embed \
+query via llm_embed, compute similarities in compute_similarities activity \
+(numpy operations from workflow body break Temporal's determinism sandbox), \
+sort semantic-primary in rank_and_pack with tag/mode score as tiebreaker. \
+Document the generic workflow_steps activities (llm_chat, llm_embed, \
+compute_similarities) and the output-type registry. Mention that all LLM \
+calls now go through llm_chat — the per-purpose extract_from_experience / \
+review_entry / consolidate_entries_llm activities have been replaced. \
+Document the entry_sources reparenting in MaintenanceWorkflow's \
+consolidation step (sources from merged-away entries follow to the \
+survivor before the originals are pruned). Cross-link to \
+howto/retrieve-entries.md, howto/push-experience.md, \
 howto/manage-entries.md, data-model.md, and explanation/quality-bar.md."""
 
 [topics.workflows.howto]
@@ -299,11 +350,85 @@ guidance = """Show complete, runnable code. Include imports. Cover both \
 Temporal and direct library usage. Jump straight to task sections — no \
 explanatory preamble. Link to reference/workflows.md for workflow details."""
 
+[topics.skill-substrate]
+title = "Claude Code Skill Substrate"
+description = "Compose pbook commands to power a Claude Code skill"
+complexity = "intermediate"
+order = 12
+prerequisites = ["entries", "retrieval"]
+
+[topics.skill-substrate.howto]
+file = "howto/use-as-skill-substrate.md"
+status = "draft"
+covers = [
+    "How to fetch the editorial guidance via pbook skill-prompt --json",
+    "How to compose `search` for the query workflow",
+    "How to compose `get` + `sources` + `session-text` for the discuss workflow",
+    "How to iterate the review queue with `review` + `approve` / `reject --reason`",
+    "How to add new entries via stdin with tag discovery from `pbook tags`",
+    "How to consume the JSON error envelope in shell pipelines",
+]
+detail = """Recipe-style how-to. One section per skill workflow (query, \
+discuss, review queue, add). Each section shows the exact shell composition \
+the skill agent runs."""
+guidance = """The CLI is primitive; the skill composes. This how-to is the \
+authoritative external-facing version of the workflow markdown that \
+`pbook skill-prompt --json` returns at runtime — keep them in sync. \
+For each workflow, show the shell pipeline (real commands with example \
+input/output) and call out the JSON shapes the consumer should parse. \
+For 'discuss', show the three-step composition: get → sources → \
+session-text only when the source_context excerpt isn't enough. For \
+'add', show stdin piping with `pbook tags --json` for tag discovery and \
+`pbook add --schema` for the JSON shape. For the review queue, show \
+the iteration pattern: `pbook review --json | jq '.[].id'` then per-id \
+get + sources + decide + approve/reject. Note that `pbook search` \
+requires the worker; document the worker_unavailable error code path. \
+Link to reference/cli.md for full command surfaces, reference/data-model.md \
+for shapes, and explanation/architecture.md for the primitive-CLI \
+rationale."""
+
 [topics.architecture]
 title = "Architecture"
 description = "Design principles and system structure"
 complexity = "intermediate"
-order = 12
+order = 13
+
+[topics.feedback]
+title = "Feedback Signal"
+description = "How helpful/harmful signals are recorded and integrated into retrieval"
+complexity = "intermediate"
+order = 14
+prerequisites = ["retrieval"]
+
+[topics.feedback.explanation]
+file = "explanation/feedback.md"
+status = "draft"
+covers = [
+    "When `pbook feedback` writes to the database (immediate, synchronous)",
+    "When the signal influences ranking (every retrieval, via _helpfulness_adjustment)",
+    "Why a 3-retrieval threshold gates the signal",
+    "How retrieval_count is incremented (best-effort, fire-and-forget activity)",
+    "How feedback survives across runs and ranks fresh per query (no batch pass)",
+    "Connection to the ACE-style insight that playbooks should evolve from usage",
+]
+detail = "Discursive. Trace the lifecycle of a single helpful/harmful click from CLI to subsequent retrievals."
+guidance = """Walk the reader through the lifecycle in order: what \
+happens at `pbook feedback` time (synchronous SQL UPDATE on \
+helpful_count/harmful_count, no worker), what happens at the next \
+retrieval (rank_and_pack reads counters and calls \
+_helpfulness_adjustment, which is gated by _MIN_RETRIEVALS_FOR_SIGNAL=3 \
+and bounded by _HELPFULNESS_WEIGHT=2.0), and what happens after the \
+results are returned (record_retrieval_event increments retrieval_count \
+fire-and-forget). Show the math: ratio = (helpful - harmful) / \
+retrievals; adjustment = ratio * 2.0. Explain why the threshold exists \
+(one stray click on a fresh entry would dominate; we want the signal \
+to stabilize first). Note that there is no periodic batch job — feedback \
+takes effect on the very next retrieval where the threshold is met. \
+Connect to the ACE-paper insight that playbooks improve by being \
+graded against use. Cross-link to reference/cli.md#pbook-feedback \
+for the CLI surface, reference/data-model.md for the counter columns, \
+explanation/retrieval-ranking.md for the surrounding scoring algorithm, \
+and reference/workflows.md for record_retrieval_event."""
 
 [topics.architecture.explanation]
 file = "explanation/architecture.md"
@@ -316,6 +441,9 @@ covers = [
     "Function Core / Imperative Shell pattern",
     "How sax-llm provides LLM access",
     "Why transcript ingestion routes LLM calls through forge's batch API",
+    "Why the CLI is primitive and skills compose (skill-substrate principle)",
+    "Why entry_sources records per-experience provenance instead of session-level",
+    "Why rejection is soft-mark with a reason field",
 ]
 detail = "Discursive. Connect design decisions to the problems they solve."
 guidance = """Focus on rationale, not implementation. Defer sax-llm internals \
@@ -324,4 +452,14 @@ calls and how the provider is registered. Include a section on the forge \
 integration for transcript ingestion: why LLM calls route through forge's \
 batch API (cost efficiency, rate limit management), how the cross-queue \
 pattern works, and why domain logic stays in pbook while orchestration \
-runs on forge. Link to reference/data-model.md for specifics."""
+runs on forge. Add a section on the skill-substrate principle: pbook \
+emits structured JSON, the skill (built via /skill-creator) composes the \
+primitives — pbook does not depend on the Anthropic SDK or the claude \
+CLI. Add a section on entry_sources: per-experience granularity captures \
+each unique situation that produced a play, so 'discuss this play' can \
+trace back to specific origins. Add a section on soft-rejection: reject \
+is reversible and carries a reason because skill agents reject by \
+mistake and the reason is most valuable paired with the entry it \
+references. Link to reference/data-model.md for specifics, \
+howto/use-as-skill-substrate.md for the CLI composition, and \
+reference/workflows.md for the workflow_steps refactor."""

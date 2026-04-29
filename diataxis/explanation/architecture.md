@@ -1,9 +1,9 @@
 +++
 title = "Architecture and Design"
-weight = 121
+weight = 131
 description = "Design principles and system structure"
 topic = "architecture"
-covers = ["Why pbook has its own database and worker", "Why tags are namespaced with a controlled vocabulary", "The three ingestion paths (extraction, direct submission, transcript ingestion)", "Why embeddings for semantic deduplication and maintenance", "Function Core / Imperative Shell pattern", "How sax-llm provides LLM access", "Why transcript ingestion routes LLM calls through forge's batch API"]
+covers = ["Why pbook has its own database and worker", "Why tags are namespaced with a controlled vocabulary", "The three ingestion paths (extraction, direct submission, transcript ingestion)", "Why embeddings for semantic deduplication and maintenance", "Function Core / Imperative Shell pattern", "How sax-llm provides LLM access", "Why transcript ingestion routes LLM calls through forge's batch API", "Why the CLI is primitive and skills compose (skill-substrate principle)", "Why entry_sources records per-experience provenance instead of session-level", "Why rejection is soft-mark with a reason field"]
 detail = "Discursive. Connect design decisions to the problems they solve."
 +++
 pbook is a knowledge playbook service that stores curated advice and extracted pitfalls for LLM-assisted workflows. This document explains the design decisions behind its architecture.
