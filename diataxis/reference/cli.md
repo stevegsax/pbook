@@ -150,7 +150,7 @@ The JSON output is a list of source rows. Each row carries `id`, `entry_id`, `se
 pbook sources 151
 ```
 
-For end-to-end "discuss this play" composition, see [Use as Skill Substrate](/howto/use-as-skill-substrate/).
+For end-to-end "discuss this playbook" composition, see [Use as Skill Substrate](/howto/use-as-skill-substrate/).
 
 ## pbook session-text
 

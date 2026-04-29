@@ -168,13 +168,13 @@ CREATE INDEX ix_entry_sources_entry_id   ON entry_sources (entry_id);
 | `session_id`                | Claude Code session UUID; matches the `.jsonl` file's stem in `~/.claude/projects/`                                      |
 | `project_name`              | Display-friendly project name (e.g. `forge`, `pbook`)                                                                    |
 | `experience_hash`           | `sha256(problem + resolution + context)`; nullable for future manual-attribution rows                                    |
-| `source_context`            | Rich situation excerpt forge captured during analysis — used by "discuss this play" flows                                |
+| `source_context`            | Rich situation excerpt forge captured during analysis — used by "discuss this playbook" flows                                |
 | `source_context_embedding`  | Float32 embedding of `source_context`; for ad-hoc analysis only — **not** consumed by retrieval ranking                  |
 | `created_at`                | When the row was written                                                                                                 |
 
 The `UNIQUE (entry_id, session_id, experience_hash)` constraint makes re-ingestion idempotent: identical experiences hash to the same value and the second insert is a no-op (`ON CONFLICT DO NOTHING`). The match-or-attach extraction path enforces an additional source-context dedup: a new row is skipped when its `source_context_embedding` is within `0.92` cosine similarity of an existing row on the same entry.
 
-Use `pbook sources <id> --json` to fetch all source rows for an entry (the CLI strips `source_context_embedding` from the output). For end-to-end "discuss this play" composition, see [Use as Skill Substrate](/howto/use-as-skill-substrate/).
+Use `pbook sources <id> --json` to fetch all source rows for an entry (the CLI strips `source_context_embedding` from the output). For end-to-end "discuss this playbook" composition, see [Use as Skill Substrate](/howto/use-as-skill-substrate/).
 
 Database path resolution order:
 

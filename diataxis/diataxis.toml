@@ -253,7 +253,7 @@ detail = "Tabular. Field name, type, default, description for each model."
 guidance = """Mirror the Pydantic model structure. Use tables for fields. \
 Include short illustrative examples (1-3 lines JSON) for each entry type. \
 Document the entry_sources join table — its purpose (provenance for \
-'discuss this play' flows), its UNIQUE (entry_id, session_id, \
+'discuss this playbook' flows), its UNIQUE (entry_id, session_id, \
 experience_hash) constraint, and the experience-level granularity that \
 lets one session contribute multiple distinct situations. Document the \
 soft-rejection columns (rejected bool, rejection_reason text) and call \
@@ -365,12 +365,13 @@ covers = [
     "How to compose `search` for the query workflow",
     "How to compose `get` + `sources` + `session-text` for the discuss workflow",
     "How to iterate the review queue with `review` + `approve` / `reject --reason`",
+    "How to record helpful/harmful feedback (confirm-before-record, harmful vs reject, 3-retrieval threshold)",
     "How to add new entries via stdin with tag discovery from `pbook tags`",
     "How to consume the JSON error envelope in shell pipelines",
 ]
 detail = """Recipe-style how-to. One section per skill workflow (query, \
-discuss, review queue, add). Each section shows the exact shell composition \
-the skill agent runs."""
+discuss, review queue, feedback, add). Each section shows the exact shell \
+composition the skill agent runs."""
 guidance = """The CLI is primitive; the skill composes. This how-to is the \
 authoritative external-facing version of the workflow markdown that \
 `pbook skill-prompt --json` returns at runtime — keep them in sync. \
@@ -456,8 +457,8 @@ runs on forge. Add a section on the skill-substrate principle: pbook \
 emits structured JSON, the skill (built via /skill-creator) composes the \
 primitives — pbook does not depend on the Anthropic SDK or the claude \
 CLI. Add a section on entry_sources: per-experience granularity captures \
-each unique situation that produced a play, so 'discuss this play' can \
-trace back to specific origins. Add a section on soft-rejection: reject \
+each unique situation that produced a playbook, so 'discuss this playbook' \
+can trace back to specific origins. Add a section on soft-rejection: reject \
 is reversible and carries a reason because skill agents reject by \
 mistake and the reason is most valuable paired with the entry it \
 references. Link to reference/data-model.md for specifics, \
