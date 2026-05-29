@@ -15,20 +15,24 @@ from pbook.activities.maintenance import (
     group_similar_entries,
     prune_entries,
 )
-from pbook.store import get_engine, run_migrations, save_entries
+from pbook.store import get_database_url, get_engine, run_migrations, save_entries
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 
 def _embedding(values: list[float]) -> bytes:
-    return np.array(values, dtype=np.float32).tobytes()
+    from pbook.store import EMBEDDING_DIM
+
+    padded = [*values, *([0.0] * (EMBEDDING_DIM - len(values)))]
+    return np.array(padded, dtype=np.float32).tobytes()
 
 
 def _setup_db(tmp_path: Path):
-    db_path = tmp_path / "test.db"
-    run_migrations(db_path)
-    return get_engine(db_path)
+    url = get_database_url()
+    assert url is not None
+    run_migrations(url)
+    return get_engine(url)
 
 
 # ---------------------------------------------------------------------------
@@ -117,7 +121,6 @@ class TestGroupSimilarEntries:
 class TestFetchAllEntriesForMaintenance:
     @pytest.mark.asyncio
     async def test_returns_entries(self, tmp_path: Path, monkeypatch):
-        monkeypatch.setenv("PBOOK_DB_PATH", str(tmp_path / "test.db"))
         engine = _setup_db(tmp_path)
         save_entries(engine, [{
             "title": "Test",
@@ -139,13 +142,12 @@ class TestFetchAllEntriesForMaintenance:
 
     @pytest.mark.asyncio
     async def test_empty_when_no_db(self, tmp_path: Path, monkeypatch):
-        monkeypatch.setenv("PBOOK_DB_PATH", str(tmp_path / "nonexistent.db"))
         result = await fetch_all_entries_for_maintenance()
         assert result == []
 
     @pytest.mark.asyncio
     async def test_empty_when_disabled(self, monkeypatch):
-        monkeypatch.setenv("PBOOK_DB_PATH", "")
+        monkeypatch.setenv("PBOOK_DATABASE_URL", "")
         result = await fetch_all_entries_for_maintenance()
         assert result == []
 
@@ -158,7 +160,6 @@ class TestFetchAllEntriesForMaintenance:
 class TestPruneEntries:
     @pytest.mark.asyncio
     async def test_deletes_entries(self, tmp_path: Path, monkeypatch):
-        monkeypatch.setenv("PBOOK_DB_PATH", str(tmp_path / "test.db"))
         engine = _setup_db(tmp_path)
         save_entries(engine, [
             {
@@ -193,7 +194,7 @@ class TestPruneEntries:
 
     @pytest.mark.asyncio
     async def test_disabled_store(self, monkeypatch):
-        monkeypatch.setenv("PBOOK_DB_PATH", "")
+        monkeypatch.setenv("PBOOK_DATABASE_URL", "")
         count = await prune_entries([1, 2])
         assert count == 0
 

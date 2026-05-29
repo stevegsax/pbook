@@ -25,6 +25,7 @@ from pbook.prompts.review import (
 )
 from pbook.store import (
     build_entry_dict,
+    get_database_url,
     get_engine,
     run_migrations,
     save_entries,
@@ -55,9 +56,10 @@ def _cleanup_provider():
 
 
 def _setup_db(tmp_path: Path):
-    db_path = tmp_path / "test.db"
-    run_migrations(db_path)
-    return get_engine(db_path)
+    url = get_database_url()
+    assert url is not None
+    run_migrations(url)
+    return get_engine(url)
 
 
 # ---------------------------------------------------------------------------
@@ -171,7 +173,6 @@ class TestValidateEntry:
 class TestFetchExistingEntries:
     @pytest.mark.asyncio
     async def test_returns_recent_entries(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("PBOOK_DB_PATH", str(tmp_path / "test.db"))
         engine = _setup_db(tmp_path)
 
         entry = PlaybookEntry(title="Existing", content="Content", tags=["lang:python"])
@@ -183,13 +184,12 @@ class TestFetchExistingEntries:
 
     @pytest.mark.asyncio
     async def test_returns_empty_when_no_db(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("PBOOK_DB_PATH", str(tmp_path / "nonexistent.db"))
         result = await fetch_existing_entries(50)
         assert result == []
 
     @pytest.mark.asyncio
     async def test_returns_empty_when_disabled(self, monkeypatch):
-        monkeypatch.setenv("PBOOK_DB_PATH", "")
+        monkeypatch.setenv("PBOOK_DATABASE_URL", "")
         result = await fetch_existing_entries(50)
         assert result == []
 
@@ -231,7 +231,6 @@ class TestManualEntryWorkflow:
     async def test_approved_entry(
         self, env: WorkflowEnvironment, tmp_path: Path, monkeypatch,
     ) -> None:
-        monkeypatch.setenv("PBOOK_DB_PATH", str(tmp_path / "test.db"))
         _setup_db(tmp_path)
 
         mock_chat = _make_chat_stub({
@@ -276,7 +275,6 @@ class TestManualEntryWorkflow:
     async def test_rejected_entry(
         self, env: WorkflowEnvironment, tmp_path: Path, monkeypatch,
     ) -> None:
-        monkeypatch.setenv("PBOOK_DB_PATH", str(tmp_path / "test.db"))
         _setup_db(tmp_path)
 
         mock_chat = _make_chat_stub({
@@ -321,7 +319,6 @@ class TestManualEntryWorkflow:
     async def test_invalid_json(
         self, env: WorkflowEnvironment, tmp_path: Path, monkeypatch,
     ) -> None:
-        monkeypatch.setenv("PBOOK_DB_PATH", str(tmp_path / "test.db"))
 
         async with Worker(
             env.client,

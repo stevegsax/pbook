@@ -55,18 +55,18 @@ async def fetch_entry_ids(input_json: str) -> list[int]:
     """Query store for matching entry IDs."""
     import json as json_mod
 
-    from pbook.store import get_db_path, get_engine, run_migrations
+    from pbook.store import get_database_url, get_engine, run_migrations
 
     params = json_mod.loads(input_json)
     tags = params.get("tags", [])
     limit = params.get("limit", 50)
 
-    db_path = get_db_path()
-    if db_path is None or not db_path.exists():
+    db_url = get_database_url()
+    if db_url is None:
         return []
 
-    run_migrations(db_path)
-    engine = get_engine(db_path)
+    run_migrations(db_url)
+    engine = get_engine(db_url)
 
     from pbook.store import get_entries_by_tags
 
@@ -78,15 +78,15 @@ async def fetch_entry_ids(input_json: str) -> list[int]:
 @activity.defn
 async def export_single_entry(entry_id: int) -> dict:
     """Fetch one entry by ID and convert to PlaybookEntry dict."""
-    from pbook.store import get_db_path, get_engine, get_entry_by_id, run_migrations
+    from pbook.store import get_database_url, get_engine, get_entry_by_id, run_migrations
 
-    db_path = get_db_path()
-    if db_path is None or not db_path.exists():
+    db_url = get_database_url()
+    if db_url is None:
         msg = "No store available"
         raise RuntimeError(msg)
 
-    run_migrations(db_path)
-    engine = get_engine(db_path)
+    run_migrations(db_url)
+    engine = get_engine(db_url)
     row = get_entry_by_id(engine, entry_id)
     if row is None:
         msg = f"Entry {entry_id} not found"

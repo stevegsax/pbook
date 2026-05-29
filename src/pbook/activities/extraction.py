@@ -58,7 +58,7 @@ async def save_extracted_entries(input_json: str) -> int:
         build_entry_dict,
         find_semantic_duplicates,
         find_similar_source_contexts,
-        get_db_path,
+        get_database_url,
         get_engine,
         run_migrations,
         save_entry_returning_id,
@@ -73,12 +73,12 @@ async def save_extracted_entries(input_json: str) -> int:
         logger.debug("No extracted entries to save")
         return 0
 
-    db_path = get_db_path()
-    if db_path is None:
+    db_url = get_database_url()
+    if db_url is None:
         return 0
 
-    run_migrations(db_path)
-    engine = get_engine(db_path)
+    run_migrations(db_url)
+    engine = get_engine(db_url)
 
     src_session_id = source.get("session_id", "")
     src_project_name = source.get("project_name", project)
@@ -159,18 +159,18 @@ async def record_ingested_session(input_json: str) -> None:
     Accepts JSON with keys: session_id, project_name, experiences_found, entries_created.
     Called cross-queue from forge's IngestionWorkflow.
     """
-    from pbook.store import get_db_path, get_engine, run_migrations
+    from pbook.store import get_database_url, get_engine, run_migrations
     from pbook.store import record_ingested_session as _record
 
     data = json.loads(input_json)
     session_id = data["session_id"]
 
-    db_path = get_db_path()
-    if db_path is None:
+    db_url = get_database_url()
+    if db_url is None:
         return
 
-    run_migrations(db_path)
-    engine = get_engine(db_path)
+    run_migrations(db_url)
+    engine = get_engine(db_url)
     _record(
         engine,
         session_id=session_id,
@@ -188,7 +188,7 @@ async def record_ingested_session_error(input_json: str) -> None:
     Called cross-queue from forge's IngestionWorkflow on failure paths.
     """
     from pbook.store import (
-        get_db_path,
+        get_database_url,
         get_engine,
         run_migrations,
     )
@@ -199,12 +199,12 @@ async def record_ingested_session_error(input_json: str) -> None:
     data = json.loads(input_json)
     session_id = data["session_id"]
 
-    db_path = get_db_path()
-    if db_path is None:
+    db_url = get_database_url()
+    if db_url is None:
         return
 
-    run_migrations(db_path)
-    engine = get_engine(db_path)
+    run_migrations(db_url)
+    engine = get_engine(db_url)
     _record_error(
         engine,
         session_id=session_id,

@@ -2,8 +2,8 @@
 
 Thin Temporal client. Every direct-DB command (except ``migrate``)
 submits a workflow that runs against the worker's configured DB. The
-worker process is the only one that opens the DB file — its
-``PBOOK_DB_PATH`` is the single source of truth for which DB any
+worker process is the only one that connects to the database — its
+``PBOOK_DATABASE_URL`` is the single source of truth for which DB any
 operation hits.
 
 ``migrate`` and ``skill-prompt`` are the lone exceptions: ``migrate``
@@ -852,15 +852,18 @@ def migrate() -> None:
     The lone CLI command that opens the DB directly — schema bootstrap
     must precede the worker's first connection.
     """
-    from pbook.store import get_db_path, run_migrations
+    from pbook.store import _redact_url, get_database_url, run_migrations
 
-    db_path = get_db_path()
-    if db_path is None:
-        click.echo("Error: Store is disabled (PBOOK_DB_PATH is empty).", err=True)
+    db_url = get_database_url()
+    if db_url is None:
+        click.echo(
+            "Error: Store is disabled (PBOOK_DATABASE_URL is unset or empty).",
+            err=True,
+        )
         sys.exit(1)
 
-    run_migrations(db_path)
-    click.echo(f"Migrations complete: {db_path}")
+    run_migrations(db_url)
+    click.echo(f"Migrations complete: {_redact_url(db_url)}")
 
 
 @main.command()

@@ -14,7 +14,7 @@ from pbook.activities.export import (
     fetch_entry_ids,
 )
 from pbook.models import PlaybookEntry
-from pbook.store import build_entry_dict, get_engine, run_migrations, save_entries
+from pbook.store import build_entry_dict, get_database_url, get_engine, run_migrations, save_entries
 from pbook.worker import PBOOK_TASK_QUEUE
 from pbook.workflows.export import ExportWorkflow
 
@@ -34,9 +34,10 @@ async def env():
 
 
 def _setup_db(tmp_path: Path):
-    db_path = tmp_path / "test.db"
-    run_migrations(db_path)
-    return get_engine(db_path)
+    url = get_database_url()
+    assert url is not None
+    run_migrations(url)
+    return get_engine(url)
 
 
 # ---------------------------------------------------------------------------
@@ -75,7 +76,6 @@ class TestExportWorkflow:
     async def test_export_entries(
         self, env: WorkflowEnvironment, tmp_path: Path, monkeypatch,
     ) -> None:
-        monkeypatch.setenv("PBOOK_DB_PATH", str(tmp_path / "test.db"))
         engine = _setup_db(tmp_path)
 
         entry = PlaybookEntry(
@@ -107,7 +107,6 @@ class TestExportWorkflow:
     async def test_export_empty(
         self, env: WorkflowEnvironment, tmp_path: Path, monkeypatch,
     ) -> None:
-        monkeypatch.setenv("PBOOK_DB_PATH", str(tmp_path / "test.db"))
         _setup_db(tmp_path)
 
         import json

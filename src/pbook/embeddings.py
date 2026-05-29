@@ -56,6 +56,32 @@ async def get_embedding(text: str, model: str = DEFAULT_EMBEDDING_MODEL) -> byte
     return np.array(vector, dtype=np.float32).tobytes()
 
 
+def bytes_to_vector(raw: bytes | None) -> list[float] | None:
+    """Decode a float32 byte blob into a list of floats for a pgvector column.
+
+    The rest of pbook passes embeddings around as float32 ``bytes`` (the
+    format that crosses the Temporal activity wire as base64). pgvector's
+    SQLAlchemy ``Vector`` type binds Python sequences, so we decode at the
+    store's write boundary. Empty bytes are treated as "no embedding"
+    (``None``) so they don't trip the column's dimension check.
+    """
+    if not raw:
+        return None
+    return np.frombuffer(raw, dtype=np.float32).tolist()
+
+
+def vector_to_bytes(vec: object) -> bytes | None:
+    """Encode a pgvector result (numpy array / list) back to float32 bytes.
+
+    Inverse of :func:`bytes_to_vector`, applied at the store's read
+    boundary so Python consumers (cosine similarity, base64 wire
+    encoding) keep seeing the float32 ``bytes`` they expect.
+    """
+    if vec is None:
+        return None
+    return np.asarray(vec, dtype=np.float32).tobytes()
+
+
 def cosine_similarity(a: bytes, b: bytes) -> float:
     """Compute cosine similarity between two float32-encoded vector blobs."""
     vec_a = np.frombuffer(a, dtype=np.float32)

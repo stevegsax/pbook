@@ -51,14 +51,14 @@ async def validate_entry(raw_json: str) -> str:
 @activity.defn
 async def fetch_existing_entries(limit: int = 50) -> list[dict]:
     """Query recent entries for duplication context."""
-    from pbook.store import get_db_path, get_engine, list_recent_entries, run_migrations
+    from pbook.store import get_database_url, get_engine, list_recent_entries, run_migrations
 
-    db_path = get_db_path()
-    if db_path is None or not db_path.exists():
+    db_url = get_database_url()
+    if db_url is None:
         return []
 
-    run_migrations(db_path)
-    engine = get_engine(db_path)
+    run_migrations(db_url)
+    engine = get_engine(db_url)
     return list_recent_entries(engine, limit=limit)
 
 
@@ -70,18 +70,18 @@ async def find_duplicates(input_json: str) -> list[dict]:
     """
     import base64
 
-    from pbook.store import find_semantic_duplicates, get_db_path, get_engine, run_migrations
+    from pbook.store import find_semantic_duplicates, get_database_url, get_engine, run_migrations
 
     data = json.loads(input_json)
     embedding = base64.b64decode(data["embedding"])
     threshold = data.get("threshold", 0.85)
 
-    db_path = get_db_path()
-    if db_path is None or not db_path.exists():
+    db_url = get_database_url()
+    if db_url is None:
         return []
 
-    run_migrations(db_path)
-    engine = get_engine(db_path)
+    run_migrations(db_url)
+    engine = get_engine(db_url)
     return find_semantic_duplicates(engine, embedding, threshold=threshold)
 
 

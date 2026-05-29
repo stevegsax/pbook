@@ -20,6 +20,7 @@ from pbook.activities.retrieval import (
 from pbook.models import PlaybookEntry, RetrievalInput, RetrievalMode
 from pbook.store import (
     build_entry_dict,
+    get_database_url,
     get_engine,
     get_entry_by_id,
     run_migrations,
@@ -44,9 +45,20 @@ async def env():
 
 
 def _setup_db(tmp_path: Path):
-    db_path = tmp_path / "test.db"
-    run_migrations(db_path)
-    return get_engine(db_path)
+    url = get_database_url()
+    assert url is not None
+    run_migrations(url)
+    return get_engine(url)
+
+
+def _pad(*coords: float) -> bytes:
+    """Pack a float32 vector padded to the stored embedding dimension."""
+    import struct
+
+    from pbook.store import EMBEDDING_DIM
+
+    padded = [*coords, *([0.0] * (EMBEDDING_DIM - len(coords)))]
+    return struct.pack(f"{EMBEDDING_DIM}f", *padded)
 
 
 def _make_entry(title: str, tags: list[str], entry_type: str = "curated") -> dict:
@@ -284,15 +296,13 @@ class TestComputeSimilaritiesByID:
     async def test_aligned_query_scores_high(self, tmp_path: Path, monkeypatch):
         import base64 as _b64
         import json as _json
-        import struct
 
         from pbook.models import EntryType, PlaybookEntry
 
-        monkeypatch.setenv("PBOOK_DB_PATH", str(tmp_path / "test.db"))
         engine = _setup_db(tmp_path)
 
-        emb_a = struct.pack("4f", 1.0, 0.0, 0.0, 0.0)
-        emb_b = struct.pack("4f", 0.0, 1.0, 0.0, 0.0)
+        emb_a = _pad(1.0, 0.0, 0.0, 0.0)
+        emb_b = _pad(0.0, 1.0, 0.0, 0.0)
         save_entries(engine, [
             build_entry_dict(PlaybookEntry(
                 title="A", content="A", tags=["lang:python"],
@@ -305,7 +315,7 @@ class TestComputeSimilaritiesByID:
         ])
 
         # Query embedding aligned with A.
-        query = struct.pack("4f", 1.0, 0.0, 0.0, 0.0)
+        query = _pad(1.0, 0.0, 0.0, 0.0)
         result = await compute_similarities_by_id(_json.dumps({
             "query_embedding_b64": _b64.b64encode(query).decode("ascii"),
             "ids": [1, 2],
@@ -317,11 +327,9 @@ class TestComputeSimilaritiesByID:
     async def test_skips_entries_without_embeddings(self, tmp_path: Path, monkeypatch):
         import base64 as _b64
         import json as _json
-        import struct
 
         from pbook.models import EntryType, PlaybookEntry
 
-        monkeypatch.setenv("PBOOK_DB_PATH", str(tmp_path / "test.db"))
         engine = _setup_db(tmp_path)
         save_entries(engine, [
             build_entry_dict(PlaybookEntry(
@@ -330,7 +338,7 @@ class TestComputeSimilaritiesByID:
             )),
         ])
 
-        query = struct.pack("4f", 1.0, 0.0, 0.0, 0.0)
+        query = _pad(1.0, 0.0, 0.0, 0.0)
         result = await compute_similarities_by_id(_json.dumps({
             "query_embedding_b64": _b64.b64encode(query).decode("ascii"),
             "ids": [1],
@@ -342,12 +350,10 @@ class TestComputeSimilaritiesByID:
     async def test_empty_ids_returns_empty_dict(self, tmp_path: Path, monkeypatch):
         import base64 as _b64
         import json as _json
-        import struct
 
-        monkeypatch.setenv("PBOOK_DB_PATH", str(tmp_path / "test.db"))
         _setup_db(tmp_path)
 
-        query = struct.pack("4f", 1.0, 0.0, 0.0, 0.0)
+        query = _pad(1.0, 0.0, 0.0, 0.0)
         result = await compute_similarities_by_id(_json.dumps({
             "query_embedding_b64": _b64.b64encode(query).decode("ascii"),
             "ids": [],
@@ -379,11 +385,9 @@ class TestFetchCandidatesWireFormat:
     async def test_query_only_branch_returns_minimal_dicts(
         self, tmp_path: Path, monkeypatch,
     ) -> None:
-        import struct
 
-        monkeypatch.setenv("PBOOK_DB_PATH", str(tmp_path / "test.db"))
         engine = _setup_db(tmp_path)
-        emb = struct.pack("4f", 1.0, 0.0, 0.0, 0.0)
+        emb = _pad(1.0, 0.0, 0.0, 0.0)
         from pbook.models import EntryType, PlaybookEntry
 
         save_entries(engine, [
@@ -413,11 +417,9 @@ class TestFetchCandidatesWireFormat:
     ) -> None:
         """Same minimal contract for the tag branch — forge consumers
         get the same wire shape; full content is loaded by score_and_pack."""
-        import struct
 
-        monkeypatch.setenv("PBOOK_DB_PATH", str(tmp_path / "test.db"))
         engine = _setup_db(tmp_path)
-        emb = struct.pack("4f", 0.0, 1.0, 0.0, 0.0)
+        emb = _pad(0.0, 1.0, 0.0, 0.0)
         from pbook.models import EntryType, PlaybookEntry
 
         save_entries(engine, [
@@ -457,7 +459,6 @@ class TestRetrievalWorkflow:
     async def test_retrieval_returns_entries(
         self, env: WorkflowEnvironment, tmp_path: Path, monkeypatch,
     ) -> None:
-        monkeypatch.setenv("PBOOK_DB_PATH", str(tmp_path / "test.db"))
         engine = _setup_db(tmp_path)
         save_entries(engine, [
             _make_entry("Python advice", ["lang:python"]),
@@ -485,7 +486,6 @@ class TestRetrievalWorkflow:
     async def test_retrieval_respects_token_budget(
         self, env: WorkflowEnvironment, tmp_path: Path, monkeypatch,
     ) -> None:
-        monkeypatch.setenv("PBOOK_DB_PATH", str(tmp_path / "test.db"))
         engine = _setup_db(tmp_path)
         # Create entries that total more than a tiny budget
         for i in range(10):
@@ -514,7 +514,6 @@ class TestRetrievalWorkflow:
     async def test_retrieval_empty_store(
         self, env: WorkflowEnvironment, tmp_path: Path, monkeypatch,
     ) -> None:
-        monkeypatch.setenv("PBOOK_DB_PATH", str(tmp_path / "test.db"))
         _setup_db(tmp_path)
 
         async with Worker(
@@ -537,7 +536,6 @@ class TestRetrievalWorkflow:
     async def test_retrieval_records_served_entries(
         self, env: WorkflowEnvironment, tmp_path: Path, monkeypatch,
     ) -> None:
-        monkeypatch.setenv("PBOOK_DB_PATH", str(tmp_path / "test.db"))
         engine = _setup_db(tmp_path)
         save_entries(engine, [
             _make_entry("Python advice", ["lang:python"]),
@@ -569,17 +567,15 @@ class TestRetrievalWorkflow:
         and ranks candidates by cosine similarity. Mocking llm_embed lets
         us test the wiring without needing OpenAI."""
         import base64
-        import struct
 
         from temporalio import activity
 
-        monkeypatch.setenv("PBOOK_DB_PATH", str(tmp_path / "test.db"))
         engine = _setup_db(tmp_path)
 
         # Two entries with deliberately different stored embeddings.
         # We'll mock the query embedding so it aligns with the second.
-        emb_a = struct.pack("4f", 1.0, 0.0, 0.0, 0.0)
-        emb_b = struct.pack("4f", 0.0, 1.0, 0.0, 0.0)
+        emb_a = _pad(1.0, 0.0, 0.0, 0.0)
+        emb_b = _pad(0.0, 1.0, 0.0, 0.0)
         from pbook.models import EntryType, PlaybookEntry
 
         save_entries(engine, [

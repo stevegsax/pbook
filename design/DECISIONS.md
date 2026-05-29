@@ -2,13 +2,15 @@
 
 ## Separate database
 
-pbook uses its own SQLite database (`pbook.db`), not a shared database with any client. This means:
+pbook uses its own PostgreSQL database (with the `pgvector` extension; e.g. a dedicated Supabase project), not a shared database with any client. This means:
 
 - Clients cannot accidentally corrupt playbook data through schema migrations or direct writes.
 - The database can be backed up, migrated, or reset independently.
 - Multiple projects share the same playbook store without coordination.
 
-Database path follows XDG: `$PBOOK_DB_PATH` > `$XDG_STATE_HOME/pbook/pbook.db` > `~/.local/state/pbook/pbook.db`. Set `PBOOK_DB_PATH=""` to disable the store entirely.
+The connection is configured by `PBOOK_DATABASE_URL` (a PostgreSQL DSN). `postgres://`/`postgresql://` URLs are coerced to the `postgresql+psycopg` driver; SSL/pooling options ride in the URL query string (Supabase: direct/session connection on port 5432 with `?sslmode=require`). Set `PBOOK_DATABASE_URL=""` (or leave it unset) to disable the store entirely.
+
+Embeddings use `pgvector`: stored as `vector(1536)` columns and ranked in-database with the cosine distance operator (`<=>`), backed by an HNSW index, rather than computing cosine similarity in Python over every row.
 
 ## Separate Temporal queue
 

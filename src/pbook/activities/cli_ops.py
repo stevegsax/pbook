@@ -2,8 +2,8 @@
 
 Every direct-DB CLI command (except ``pbook migrate``) routes through
 one of these activities. The worker process is the only place that
-opens the DB file — its ``PBOOK_DB_PATH`` is the single source of
-truth for which DB the operation hits. CLI processes are thin clients
+connects to the database — its ``PBOOK_DATABASE_URL`` is the single
+source of truth for which DB the operation hits. CLI processes are thin clients
 that submit workflows and render results.
 
 The grouping helper ``group_review_by_experience`` is pure and
@@ -47,17 +47,17 @@ def _engine():
     raise — callers should see a clear error rather than a confusing
     silent fallback.
     """
-    from pbook.store import get_db_path, get_engine, run_migrations
+    from pbook.store import get_database_url, get_engine, run_migrations
 
-    db_path = get_db_path()
-    if db_path is None:
+    db_url = get_database_url()
+    if db_url is None:
         msg = (
-            "Worker has no DB configured. Set PBOOK_DB_PATH on the worker "
+            "Worker has no DB configured. Set PBOOK_DATABASE_URL on the worker "
             "process and restart."
         )
         raise RuntimeError(msg)
-    run_migrations(db_path)
-    return get_engine(db_path)
+    run_migrations(db_url)
+    return get_engine(db_url)
 
 
 def group_review_by_experience(

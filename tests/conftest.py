@@ -1,23 +1,67 @@
-"""Shared test fixtures for pbook."""
+"""Shared test fixtures for pbook.
+
+Tests run against a real PostgreSQL server. By default an ephemeral local
+cluster is started for the session (see ``tests/_pgcluster.py``); set
+``PBOOK_TEST_DATABASE_URL`` to point the suite at an existing Postgres
+instance (which must have the pgvector extension available) instead.
+
+A single database is migrated once per session; each test gets a clean
+slate via ``TRUNCATE`` and has ``PBOOK_DATABASE_URL`` pointed at it.
+"""
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
 
+import psycopg
 import pytest
 import sqlalchemy as sa
 
-from pbook.store import get_engine, run_migrations
+from pbook.store import get_database_url, get_engine, normalize_database_url, run_migrations
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
     from pathlib import Path
+
+_TABLES = ("entries", "ingested_sessions", "entry_sources")
+
+
+def _libpq_url(url: str) -> str:
+    """Strip the SQLAlchemy driver suffix for a raw psycopg connection."""
+    return url.replace("postgresql+psycopg://", "postgresql://")
+
+
+@pytest.fixture(scope="session")
+def _database_url() -> Iterator[str]:
+    """Provide a migrated Postgres database URL for the whole session."""
+    override = os.environ.get("PBOOK_TEST_DATABASE_URL")
+    if override:
+        url = normalize_database_url(override)
+        run_migrations(url)
+        yield url
+        return
+
+    from tests._pgcluster import PostgresCluster
+
+    cluster = PostgresCluster()
+    cluster.start()
+    try:
+        url = cluster.create_database("pbook_test")
+        run_migrations(url)
+        yield url
+    finally:
+        cluster.stop()
 
 
 @pytest.fixture(autouse=True)
-def _isolate_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    """Point PBOOK_DB_PATH to a temporary directory for every test."""
-    db_path = tmp_path / "test.db"
-    monkeypatch.setenv("PBOOK_DB_PATH", str(db_path))
+def _isolate_db(_database_url: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Point PBOOK_DATABASE_URL at a freshly-truncated database per test."""
+    with psycopg.connect(_libpq_url(_database_url), autocommit=True) as conn:
+        conn.execute(
+            "TRUNCATE " + ", ".join(_TABLES) + " RESTART IDENTITY CASCADE",
+        )
+    monkeypatch.setenv("PBOOK_DATABASE_URL", _database_url)
 
 
 @pytest.fixture(autouse=True)
@@ -95,8 +139,13 @@ def _bypass_cli_workflows(monkeypatch: pytest.MonkeyPatch):
 
 
 def setup_db(tmp_path: Path):
-    """Create a test database and return (engine, db_path)."""
-    db_path = tmp_path / "test.db"
-    run_migrations(db_path)
-    engine = get_engine(db_path)
-    return engine, db_path
+    """Return ``(engine, url)`` for the per-test database.
+
+    Kept for backward compatibility with tests that call it. The database
+    is already migrated and truncated by the autouse fixtures; ``tmp_path``
+    is accepted but unused.
+    """
+    url = get_database_url()
+    assert url is not None
+    engine = get_engine(url)
+    return engine, url

@@ -207,7 +207,7 @@ async def fetch_candidates(input_json: str) -> list[dict]:
     from pbook.models import RetrievalInput
     from pbook.store import (
         Entry,
-        get_db_path,
+        get_database_url,
         get_engine,
         get_entries_by_tags,
         run_migrations,
@@ -219,12 +219,12 @@ async def fetch_candidates(input_json: str) -> list[dict]:
         inp.tags, inp.mode, inp.query,
     )
 
-    db_path = get_db_path()
-    if db_path is None:
+    db_url = get_database_url()
+    if db_url is None:
         return []
 
-    run_migrations(db_path)
-    engine = get_engine(db_path)
+    run_migrations(db_url)
+    engine = get_engine(db_url)
 
     if inp.tags:
         candidates = get_entries_by_tags(
@@ -273,7 +273,7 @@ async def compute_similarities_by_id(input_json: str) -> dict[str, float]:
     """
     from pbook.embeddings import cosine_similarity
     from pbook.store import (
-        get_db_path,
+        get_database_url,
         get_embeddings_by_ids,
         get_engine,
         run_migrations,
@@ -285,11 +285,11 @@ async def compute_similarities_by_id(input_json: str) -> dict[str, float]:
     if not ids:
         return {}
 
-    db_path = get_db_path()
-    if db_path is None:
+    db_url = get_database_url()
+    if db_url is None:
         return {}
-    run_migrations(db_path)
-    engine = get_engine(db_path)
+    run_migrations(db_url)
+    engine = get_engine(db_url)
 
     out: dict[str, float] = {}
     for entry_id, emb in get_embeddings_by_ids(engine, ids):
@@ -326,7 +326,7 @@ async def score_and_pack(input_json: str) -> dict:
       - ``token_count``: total tokens packed
     """
     from pbook.store import (
-        get_db_path,
+        get_database_url,
         get_engine,
         get_entries_by_ids,
         run_migrations,
@@ -351,11 +351,11 @@ async def score_and_pack(input_json: str) -> dict:
     if not scored:
         return {"packed": [], "token_count": 0}
 
-    db_path = get_db_path()
-    if db_path is None:
+    db_url = get_database_url()
+    if db_url is None:
         return {"packed": [], "token_count": 0}
-    run_migrations(db_path)
-    engine = get_engine(db_path)
+    run_migrations(db_url)
+    engine = get_engine(db_url)
 
     top_ids = [entry_id for _, _, entry_id in scored[:_TOP_K_FULL_LOAD]]
     full_by_id = {e["id"]: e for e in get_entries_by_ids(engine, top_ids)}
@@ -379,17 +379,17 @@ async def record_retrieval_event(entry_ids_json: str) -> None:
     retrieval_count for each entry. Failures are logged but do not
     propagate.
     """
-    from pbook.store import get_db_path, get_engine, record_retrieval, run_migrations
+    from pbook.store import get_database_url, get_engine, record_retrieval, run_migrations
 
     entry_ids = json.loads(entry_ids_json)
     if not entry_ids:
         return
 
-    db_path = get_db_path()
-    if db_path is None:
+    db_url = get_database_url()
+    if db_url is None:
         return
 
-    run_migrations(db_path)
-    engine = get_engine(db_path)
+    run_migrations(db_url)
+    engine = get_engine(db_url)
     record_retrieval(engine, entry_ids)
     logger.info("Recording retrieval for %d entries", len(entry_ids))

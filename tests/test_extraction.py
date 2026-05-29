@@ -23,6 +23,7 @@ from pbook.prompts.extraction import (
     build_extraction_user_prompt,
 )
 from pbook.store import (
+    get_database_url,
     get_engine,
     list_recent_entries,
     run_migrations,
@@ -53,9 +54,10 @@ def _cleanup_provider():
 
 
 def _setup_db(tmp_path: Path):
-    db_path = tmp_path / "test.db"
-    run_migrations(db_path)
-    return get_engine(db_path)
+    url = get_database_url()
+    assert url is not None
+    run_migrations(url)
+    return get_engine(url)
 
 
 # ---------------------------------------------------------------------------
@@ -161,7 +163,6 @@ class TestBuildExtractionUserPrompt:
 class TestSaveExtractedEntries:
     @pytest.mark.asyncio
     async def test_saves_with_needs_review(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("PBOOK_DB_PATH", str(tmp_path / "test.db"))
         _setup_db(tmp_path)
 
         input_data = json.dumps({
@@ -174,7 +175,7 @@ class TestSaveExtractedEntries:
         count = await save_extracted_entries(input_data)
         assert count == 1
 
-        engine = get_engine(tmp_path / "test.db")
+        engine = get_engine(get_database_url())
         entries = list_recent_entries(engine)
         assert len(entries) == 1
         assert entries[0]["needs_review"] is True
@@ -183,7 +184,6 @@ class TestSaveExtractedEntries:
 
     @pytest.mark.asyncio
     async def test_empty_entries(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("PBOOK_DB_PATH", str(tmp_path / "test.db"))
         count = await save_extracted_entries(json.dumps({"entries": [], "project": ""}))
         assert count == 0
 
@@ -219,7 +219,6 @@ class TestExtractionWorkflow:
     async def test_extraction_creates_entries(
         self, env: WorkflowEnvironment, tmp_path: Path, monkeypatch,
     ) -> None:
-        monkeypatch.setenv("PBOOK_DB_PATH", str(tmp_path / "test.db"))
         _setup_db(tmp_path)
 
         mock_chat = _make_chat_stub({
@@ -258,7 +257,7 @@ class TestExtractionWorkflow:
         assert result["entries_created"] == 1
 
         # Verify embedding was saved
-        engine = get_engine(tmp_path / "test.db")
+        engine = get_engine(get_database_url())
         entries = list_recent_entries(engine)
         assert entries[0]["embedding"] == b"fake-embedding"
 
@@ -266,7 +265,6 @@ class TestExtractionWorkflow:
     async def test_extraction_empty_experiences(
         self, env: WorkflowEnvironment, tmp_path: Path, monkeypatch,
     ) -> None:
-        monkeypatch.setenv("PBOOK_DB_PATH", str(tmp_path / "test.db"))
 
         async with Worker(
             env.client,
@@ -287,7 +285,6 @@ class TestExtractionWorkflow:
     async def test_extraction_no_entries_extracted(
         self, env: WorkflowEnvironment, tmp_path: Path, monkeypatch,
     ) -> None:
-        monkeypatch.setenv("PBOOK_DB_PATH", str(tmp_path / "test.db"))
 
         mock_chat = _make_chat_stub({"entries": []})
         mock_embed = _make_embed_stub("")
@@ -326,14 +323,13 @@ class TestRecordIngestedSessionActivities:
     """Direct unit tests for the cross-queue lifecycle callbacks.
 
     The activities are thin wrappers around the store helpers. We exercise
-    them via PBOOK_DB_PATH to avoid hitting the developer's real database.
+    them via PBOOK_DATABASE_URL to avoid hitting the developer's real database.
     """
 
     @pytest.mark.asyncio
     async def test_completion_activity_writes_completed_row(
         self, tmp_path, monkeypatch,
     ):
-        monkeypatch.setenv("PBOOK_DB_PATH", str(tmp_path / "lifecycle.db"))
 
         await record_ingested_session(
             json.dumps({
@@ -344,11 +340,11 @@ class TestRecordIngestedSessionActivities:
             })
         )
 
-        from pbook.store import get_db_path, get_engine, list_ingested_sessions
+        from pbook.store import get_database_url, get_engine, list_ingested_sessions
 
-        db_path = get_db_path()
-        assert db_path is not None
-        engine = get_engine(db_path)
+        url = get_database_url()
+        assert url is not None
+        engine = get_engine(url)
         rows = list_ingested_sessions(engine)
         assert len(rows) == 1
         assert rows[0]["session_id"] == "s-good"
@@ -358,7 +354,6 @@ class TestRecordIngestedSessionActivities:
 
     @pytest.mark.asyncio
     async def test_error_activity_writes_error_row(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("PBOOK_DB_PATH", str(tmp_path / "lifecycle.db"))
 
         await record_ingested_session_error(
             json.dumps({
@@ -368,11 +363,11 @@ class TestRecordIngestedSessionActivities:
             })
         )
 
-        from pbook.store import get_db_path, get_engine, list_ingested_sessions
+        from pbook.store import get_database_url, get_engine, list_ingested_sessions
 
-        db_path = get_db_path()
-        assert db_path is not None
-        engine = get_engine(db_path)
+        url = get_database_url()
+        assert url is not None
+        engine = get_engine(url)
         rows = list_ingested_sessions(engine)
         assert len(rows) == 1
         assert rows[0]["session_id"] == "s-bad"
@@ -381,7 +376,7 @@ class TestRecordIngestedSessionActivities:
 
     @pytest.mark.asyncio
     async def test_disabled_db_is_a_noop(self, monkeypatch):
-        monkeypatch.setenv("PBOOK_DB_PATH", "")
+        monkeypatch.setenv("PBOOK_DATABASE_URL", "")
 
         # Should not raise when the store is disabled.
         await record_ingested_session(

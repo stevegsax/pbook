@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from pbook.models import EntryType, PlaybookEntry
 from pbook.store import (
     SESSION_STATUS_COMPLETED,
@@ -15,13 +13,14 @@ from pbook.store import (
     check_duplicate,
     delete_entry,
     find_similar_source_contexts,
-    get_db_path,
+    get_database_url,
     get_entries_by_tags,
     get_entry_by_id,
     get_ingested_session_ids,
     list_entry_sources_for_entry,
     list_ingested_sessions,
     list_recent_entries,
+    normalize_database_url,
     record_feedback,
     record_ingested_session,
     record_ingested_session_error,
@@ -35,31 +34,40 @@ from pbook.store import (
 from tests.conftest import setup_db
 
 # ---------------------------------------------------------------------------
-# get_db_path
+# get_database_url
 # ---------------------------------------------------------------------------
 
 
-class TestGetDbPath:
-    def test_env_var(self, monkeypatch):
-        monkeypatch.setenv("PBOOK_DB_PATH", "/tmp/custom.db")
-        assert get_db_path() == Path("/tmp/custom.db")
+class TestGetDatabaseUrl:
+    def test_env_var_normalizes_driver(self, monkeypatch):
+        monkeypatch.setenv("PBOOK_DATABASE_URL", "postgresql://u@h:5432/db")
+        assert get_database_url() == "postgresql+psycopg://u@h:5432/db"
 
     def test_empty_disables(self, monkeypatch):
-        monkeypatch.setenv("PBOOK_DB_PATH", "")
-        assert get_db_path() is None
+        monkeypatch.setenv("PBOOK_DATABASE_URL", "")
+        assert get_database_url() is None
 
-    def test_xdg_state(self, monkeypatch):
-        monkeypatch.delenv("PBOOK_DB_PATH", raising=False)
-        monkeypatch.setenv("XDG_STATE_HOME", "/tmp/xdg")
-        assert get_db_path() == Path("/tmp/xdg/pbook/pbook.db")
+    def test_unset_disables(self, monkeypatch):
+        monkeypatch.delenv("PBOOK_DATABASE_URL", raising=False)
+        assert get_database_url() is None
 
-    def test_default(self, monkeypatch):
-        monkeypatch.delenv("PBOOK_DB_PATH", raising=False)
-        monkeypatch.delenv("XDG_STATE_HOME", raising=False)
-        result = get_db_path()
-        assert result is not None
-        assert result.name == "pbook.db"
-        assert "pbook" in str(result)
+
+class TestNormalizeDatabaseUrl:
+    def test_postgres_scheme_coerced(self):
+        assert (
+            normalize_database_url("postgres://u@h/db")
+            == "postgresql+psycopg://u@h/db"
+        )
+
+    def test_postgresql_scheme_coerced(self):
+        assert (
+            normalize_database_url("postgresql://u@h/db")
+            == "postgresql+psycopg://u@h/db"
+        )
+
+    def test_explicit_driver_preserved(self):
+        url = "postgresql+psycopg://u@h/db?sslmode=require"
+        assert normalize_database_url(url) == url
 
 
 # ---------------------------------------------------------------------------
@@ -527,9 +535,18 @@ def _seed_entries(engine, n: int = 2) -> list[int]:
 
 
 def _vec(*coords: float) -> bytes:
-    """Pack a small float32 vector (for similarity testing)."""
+    """Pack a float32 vector padded to the stored embedding dimension.
+
+    Tests supply a couple of leading coordinates; the rest are zeros,
+    which preserves the intended cosine relationships while satisfying the
+    ``vector(1536)`` column.
+    """
     import struct
-    return struct.pack(f"{len(coords)}f", *coords)
+
+    from pbook.store import EMBEDDING_DIM
+
+    padded = [*coords, *([0.0] * (EMBEDDING_DIM - len(coords)))]
+    return struct.pack(f"{EMBEDDING_DIM}f", *padded)
 
 
 class TestSaveEntryReturningId:

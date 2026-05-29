@@ -15,11 +15,14 @@ uv run ruff check src tests           # lint
 uv run ruff format src tests          # format
 uv run pbook <subcommand>             # CLI
 
-uv run pbook migrate                  # initialize the SQLite store
+export PBOOK_DATABASE_URL=postgresql+psycopg://user:pass@host:5432/pbook  # Supabase/Postgres DSN
+uv run pbook migrate                  # create the schema (runs Alembic against PBOOK_DATABASE_URL)
 uv run pbook worker                   # start the Temporal worker on pbook-task-queue
 ```
 
-`pytest` runs with `asyncio_mode = "auto"` and a session-scoped event loop. `tests/conftest.py` autouse fixtures set `PBOOK_DB_PATH` to a per-test tmpdir and dispose every SQLAlchemy engine — tests never touch the developer's real database.
+The store is PostgreSQL (with the `pgvector` extension), e.g. a Supabase project. `PBOOK_DATABASE_URL` is the single source of truth for which DB is used; `postgres://`/`postgresql://` URLs are auto-coerced to the `postgresql+psycopg` driver. For Supabase, use a direct/session connection (port 5432) and append `?sslmode=require`. Setting `PBOOK_DATABASE_URL=""` (or leaving it unset) disables the store.
+
+`pytest` runs with `asyncio_mode = "auto"` and a session-scoped event loop. `tests/conftest.py` spins up an ephemeral local PostgreSQL cluster for the session (see `tests/_pgcluster.py`), migrates one database, and per test truncates the tables and points `PBOOK_DATABASE_URL` at it — tests never touch the developer's real database. The local server needs the pgvector extension (`apt-get install postgresql-16-pgvector`); set `PBOOK_TEST_DATABASE_URL` to run against an existing Postgres+pgvector instead. Engines are disposed after every test.
 
 `sax-llm` is a git dependency pinned to a release tag in `[tool.uv.sources]` (currently `rev = "v0.1.0"` against `github.com/stevegsax/sax-llm`). Local edits to a `../sax-llm` checkout are no longer picked up — to change `sax-llm` types or providers, cut a new tag there and bump the pin with `uv add "sax-llm @ git+https://github.com/stevegsax/sax-llm.git@<tag>"`, or temporarily switch the source to an editable path for local iteration.
 
@@ -37,11 +40,11 @@ pbook is a knowledge playbook service: it stores curated advice and LLM-extracte
 
 ### Data model essentials
 
-One `entries` table holds both `pitfall` (extracted) and `curated` (human-submitted) entries — `entry_type` is the discriminator. Tags are namespaced with a controlled vocabulary (`lang:`, `lib:`, `domain:`, `project:`, `pattern:`); see `src/pbook/tags.py` for valid values. Tag validation is enforced on the CLI write path; LLM-extracted tags are tolerated even if imperfect. Each entry stores a float32 vector embedding (`embedding` BLOB) used for semantic deduplication and the `MaintenanceWorkflow`'s consolidation pass.
+One `entries` table holds both `pitfall` (extracted) and `curated` (human-submitted) entries — `entry_type` is the discriminator. Tags are namespaced with a controlled vocabulary (`lang:`, `lib:`, `domain:`, `project:`, `pattern:`); see `src/pbook/tags.py` for valid values. Tag validation is enforced on the CLI write path; LLM-extracted tags are tolerated even if imperfect. Each entry stores a `pgvector` embedding (`embedding vector(1536)`) used for semantic deduplication (via the cosine distance operator `<=>`, backed by an HNSW index) and the `MaintenanceWorkflow`'s consolidation pass. The code passes embeddings around as float32 `bytes` (the base64 wire format across Temporal activities); `store.py` converts to/from `vector` at the DB boundary (`pbook.embeddings.bytes_to_vector` / `vector_to_bytes`).
 
 `needs_review=True` is "optimistic review": LLM-extracted entries are visible by default; consumers who don't want them pass `approved_only=True` to retrieval. There is no separate staging table.
 
-The DB path follows XDG: `$PBOOK_DB_PATH > $XDG_STATE_HOME/pbook/pbook.db > ~/.local/state/pbook/pbook.db`. Setting `PBOOK_DB_PATH=""` disables the store entirely (some CLI commands exit with an error).
+The DB connection comes from `$PBOOK_DATABASE_URL` (a PostgreSQL DSN, e.g. a Supabase connection string). Setting it to `""` — or leaving it unset — disables the store entirely (some CLI commands exit with an error).
 
 ### Retrieval modes
 

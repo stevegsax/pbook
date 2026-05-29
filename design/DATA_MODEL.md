@@ -2,27 +2,39 @@
 
 ## Database schema
 
-Single table, SQLite with WAL mode. Managed by Alembic (migration `001_initial`).
+PostgreSQL (e.g. a Supabase project) with the `pgvector` extension. Managed by Alembic (squashed baseline migration `001_initial`). Connection is configured via `PBOOK_DATABASE_URL`.
 
 ```sql
+CREATE EXTENSION IF NOT EXISTS vector;
+
 CREATE TABLE entries (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    id          SERIAL PRIMARY KEY,
     title       TEXT    NOT NULL,
     content     TEXT    NOT NULL,
     tags_json   TEXT    NOT NULL,       -- JSON array: ["lang:python", "lib:sqlalchemy"]
     entry_type  TEXT    NOT NULL DEFAULT 'curated',  -- pitfall | curated | api_doc
     source_project  TEXT NOT NULL DEFAULT '',
     source_task_id  TEXT NOT NULL DEFAULT '',
-    needs_review    INTEGER NOT NULL DEFAULT 0,
-    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+    needs_review    BOOLEAN NOT NULL DEFAULT false,
+    helpful_count   INTEGER NOT NULL DEFAULT 0,
+    harmful_count   INTEGER NOT NULL DEFAULT 0,
+    retrieval_count INTEGER NOT NULL DEFAULT 0,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    embedding   vector(1536),           -- pgvector; OpenAI text-embedding-3-small
+    rejected    BOOLEAN NOT NULL DEFAULT false,
+    rejection_reason TEXT
 );
 
 CREATE INDEX ix_entries_source_project ON entries(source_project);
 CREATE INDEX ix_entries_entry_type ON entries(entry_type);
+CREATE INDEX ix_entries_embedding_hnsw ON entries
+    USING hnsw (embedding vector_cosine_ops);
 ```
 
-Tag queries use SQLite's `json_each()` to unnest the `tags_json` array and match against input tags with OR semantics.
+(The `ingested_sessions` and `entry_sources` tables round out the schema; `entry_sources.source_context_embedding` is likewise a `vector(1536)`.)
+
+Tag queries use the Postgres jsonb `?|` operator (`tags_json::jsonb ?| ARRAY[...]`) to match the `tags_json` array against input tags with OR semantics. Semantic queries (dedup, consolidation, search) rank in-database with pgvector's cosine distance operator `<=>`.
 
 ## Entry types
 

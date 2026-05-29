@@ -2,7 +2,7 @@
 
 Design follows Function Core / Imperative Shell:
 
-- Pure functions: get_db_path, build_entry_dict
+- Pure functions: get_database_url, normalize_database_url, build_entry_dict
 - Imperative shell: get_engine, run_migrations, save_entries,
   get_entries_by_tags, list_recent_entries, get_entry_by_id,
   update_entry, check_duplicate
@@ -18,9 +18,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
+from pgvector.sqlalchemy import Vector
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 logger = logging.getLogger(__name__)
+
+# Dimensionality of the stored embeddings. Matches OpenAI
+# text-embedding-3-small (see pbook.embeddings.DEFAULT_EMBEDDING_MODEL).
+EMBEDDING_DIM = 1536
 
 if TYPE_CHECKING:
     from sqlalchemy import Engine
@@ -77,7 +82,7 @@ class Entry(Base):
     source_project: Mapped[str] = mapped_column(sa.String, nullable=False, default="")
     source_task_id: Mapped[str] = mapped_column(sa.String, nullable=False, default="")
     needs_review: Mapped[bool] = mapped_column(
-        sa.Boolean, nullable=False, default=False, server_default=sa.text("0"),
+        sa.Boolean, nullable=False, default=False, server_default=sa.false(),
     )
     helpful_count: Mapped[int] = mapped_column(
         sa.Integer, nullable=False, default=0, server_default=sa.text("0"),
@@ -97,9 +102,11 @@ class Entry(Base):
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
     )
-    embedding: Mapped[bytes | None] = mapped_column(sa.LargeBinary, nullable=True)
+    embedding: Mapped[list[float] | None] = mapped_column(
+        Vector(EMBEDDING_DIM), nullable=True,
+    )
     rejected: Mapped[bool] = mapped_column(
-        sa.Boolean, nullable=False, default=False, server_default=sa.text("0"),
+        sa.Boolean, nullable=False, default=False, server_default=sa.false(),
     )
     rejection_reason: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
 
@@ -123,8 +130,8 @@ class EntrySource(Base):
     project_name: Mapped[str] = mapped_column(sa.Text, nullable=False, default="")
     experience_hash: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     source_context: Mapped[str] = mapped_column(sa.Text, nullable=False, default="")
-    source_context_embedding: Mapped[bytes | None] = mapped_column(
-        sa.LargeBinary, nullable=True,
+    source_context_embedding: Mapped[list[float] | None] = mapped_column(
+        Vector(EMBEDDING_DIM), nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime, default=lambda: datetime.now(UTC),
@@ -143,39 +150,54 @@ class EntrySource(Base):
 # ---------------------------------------------------------------------------
 
 
-def get_db_path() -> Path | None:
-    """Resolve the database path.
+def normalize_database_url(url: str) -> str:
+    """Coerce a PostgreSQL URL to the ``postgresql+psycopg`` driver.
 
-    Resolution order:
-
-    1. ``PBOOK_DB_PATH`` environment variable.
-    2. ``$XDG_STATE_HOME/pbook/pbook.db``
-    3. ``~/.local/state/pbook/pbook.db``
-
-    Returns ``None`` if ``PBOOK_DB_PATH`` is set to an empty string (disables store).
+    Supabase (and ``pg_dump``/``psql``) hand out ``postgres://`` or
+    ``postgresql://`` URLs; SQLAlchemy needs an explicit driver. A URL
+    that already names a driver (``postgresql+psycopg://``) is left as-is.
+    SSL and pooling options are expected to be carried in the URL's query
+    string (e.g. ``?sslmode=require`` for Supabase).
     """
-    env_value = os.environ.get("PBOOK_DB_PATH")
-    if env_value is not None:
-        if env_value == "":
-            logger.info("Store disabled (PBOOK_DB_PATH is empty)")
-            return None
-        path = Path(env_value)
-        logger.debug("DB path from PBOOK_DB_PATH: %s", path)
-        return path
+    if url.startswith("postgresql+"):
+        return url
+    if url.startswith("postgresql://"):
+        return "postgresql+psycopg://" + url[len("postgresql://"):]
+    if url.startswith("postgres://"):
+        return "postgresql+psycopg://" + url[len("postgres://"):]
+    return url
 
-    xdg_state = os.environ.get("XDG_STATE_HOME")
-    if xdg_state:
-        path = Path(xdg_state) / "pbook" / "pbook.db"
-        logger.debug("DB path from XDG_STATE_HOME: %s", path)
-        return path
 
-    path = Path.home() / ".local" / "state" / "pbook" / "pbook.db"
-    logger.debug("DB path (default): %s", path)
-    return path
+def _redact_url(url: str) -> str:
+    """Strip the password from a database URL for safe logging."""
+    try:
+        return sa.engine.make_url(url).render_as_string(hide_password=True)
+    except Exception:
+        return "<unparseable url>"
+
+
+def get_database_url() -> str | None:
+    """Resolve the PostgreSQL connection URL from the environment.
+
+    Reads ``PBOOK_DATABASE_URL`` (e.g. the connection string from your
+    Supabase project). The URL is normalized to the ``postgresql+psycopg``
+    driver via :func:`normalize_database_url`.
+
+    Returns ``None`` when ``PBOOK_DATABASE_URL`` is unset or empty, which
+    disables the store (matching the historical empty-``PBOOK_DB_PATH``
+    behavior).
+    """
+    env_value = os.environ.get("PBOOK_DATABASE_URL")
+    if not env_value:
+        logger.info("Store disabled (PBOOK_DATABASE_URL is unset or empty)")
+        return None
+    return normalize_database_url(env_value)
 
 
 def build_entry_dict(entry: PlaybookEntry) -> dict:
     """Convert a PlaybookEntry to a dict suitable for database insertion."""
+    from pbook.embeddings import bytes_to_vector
+
     return {
         "title": entry.title,
         "content": entry.content,
@@ -187,7 +209,7 @@ def build_entry_dict(entry: PlaybookEntry) -> dict:
         "helpful_count": entry.helpful_count,
         "harmful_count": entry.harmful_count,
         "retrieval_count": entry.retrieval_count,
-        "embedding": entry.embedding,
+        "embedding": bytes_to_vector(entry.embedding),
     }
 
 
@@ -195,27 +217,49 @@ def build_entry_dict(entry: PlaybookEntry) -> dict:
 # Imperative shell
 # ---------------------------------------------------------------------------
 
+# Row columns holding pgvector embeddings. On read we decode them back to
+# float32 bytes so Python consumers (cosine similarity, base64 wire
+# encoding) see the format they expect.
+_EMBEDDING_COLUMNS = ("embedding", "source_context_embedding")
 
-def get_engine(db_path: Path) -> Engine:
-    """Create a SQLAlchemy engine with WAL mode for the given database path."""
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    logger.debug("Creating engine for %s", db_path)
-    engine = sa.create_engine(f"sqlite:///{db_path}")
+
+def _rowdict(row: object) -> dict:
+    """Materialize a result row as a dict, normalizing embedding columns.
+
+    pgvector returns vector columns as numpy arrays; the rest of pbook
+    works in float32 ``bytes``, so we re-encode them here at the read
+    boundary.
+    """
+    from pbook.embeddings import vector_to_bytes
+
+    data = dict(row)  # type: ignore[arg-type]
+    for col in _EMBEDDING_COLUMNS:
+        if col in data and data[col] is not None:
+            data[col] = vector_to_bytes(data[col])
+    return data
+
+
+def get_engine(url: str) -> Engine:
+    """Create a SQLAlchemy engine for the given PostgreSQL URL.
+
+    Registers pgvector on every new connection so vectors round-trip as
+    arrays — including through raw ``sa.text()`` queries (e.g. the tag
+    query) where SQLAlchemy's typed result processors don't run.
+    """
+    logger.debug("Creating engine for %s", _redact_url(url))
+    engine = sa.create_engine(url, pool_pre_ping=True)
 
     @sa.event.listens_for(engine, "connect")
-    def _set_sqlite_pragma(dbapi_connection: object, _connection_record: object) -> None:
-        cursor = dbapi_connection.cursor()  # type: ignore[union-attr]
-        cursor.execute("PRAGMA journal_mode=WAL")
-        # Enable FK enforcement so ON DELETE CASCADE actually fires —
-        # SQLite leaves it off by default.
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
+    def _register_pgvector(dbapi_connection: object, _record: object) -> None:
+        from pgvector.psycopg import register_vector
+
+        register_vector(dbapi_connection)
 
     return engine
 
 
-def run_migrations(db_path: Path) -> None:
-    """Run Alembic migrations programmatically."""
+def run_migrations(url: str) -> None:
+    """Run Alembic migrations programmatically against the given URL."""
     from alembic import command
     from alembic.config import Config
 
@@ -224,10 +268,8 @@ def run_migrations(db_path: Path) -> None:
 
     cfg = Config(str(ini_path))
     cfg.set_main_option("script_location", str(alembic_dir))
-
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
-    logger.debug("Running migrations for %s", db_path)
+    cfg.set_main_option("sqlalchemy.url", url)
+    logger.debug("Running migrations for %s", _redact_url(url))
     command.upgrade(cfg, "head")
 
 
@@ -251,7 +293,7 @@ def save_entry_returning_id(engine: Engine, entry: dict) -> int:
         if result.inserted_primary_key:
             return int(result.inserted_primary_key[0])
         # Fallback: re-query by title (rare path; should not happen
-        # with SQLite + autoincrement).
+        # with Postgres returning the generated identity).
         row = conn.execute(
             sa.select(Entry.__table__.c.id)
             .where(Entry.__table__.c.title == entry["title"])
@@ -274,8 +316,9 @@ def get_entries_by_tags(
 ) -> list[dict]:
     """Query entries matching any of the given tags, ordered by recency.
 
-    Uses SQLite ``json_each()`` to unnest the ``tags_json`` array and match
-    against the input tags. Rejected entries are excluded by default —
+    Uses the Postgres jsonb ``?|`` operator ("does the array contain any
+    of these strings") to match the ``tags_json`` array against the input
+    tags with OR semantics. Rejected entries are excluded by default —
     pass ``include_rejected=True`` to surface them.
     """
     if not tags:
@@ -285,28 +328,26 @@ def get_entries_by_tags(
         "Querying entries by tags=%s limit=%d approved_only=%s include_rejected=%s",
         tags, limit, approved_only, include_rejected,
     )
-    tag_placeholders = ", ".join(f":tag_{i}" for i in range(len(tags)))
-    tag_params = {f"tag_{i}": tag for i, tag in enumerate(tags)}
 
     clauses = []
     if approved_only:
-        clauses.append("AND p.needs_review = 0")
+        clauses.append("AND p.needs_review = false")
     if not include_rejected:
-        clauses.append("AND p.rejected = 0")
+        clauses.append("AND p.rejected = false")
     extra = "\n        ".join(clauses)
 
     query = sa.text(f"""
-        SELECT DISTINCT p.*
-        FROM entries p, json_each(p.tags_json) AS t
-        WHERE t.value IN ({tag_placeholders})
+        SELECT p.*
+        FROM entries p
+        WHERE p.tags_json::jsonb ?| CAST(:tags AS text[])
         {extra}
         ORDER BY p.created_at DESC
         LIMIT :limit
     """)
 
     with engine.connect() as conn:
-        rows = conn.execute(query, {**tag_params, "limit": limit}).mappings().all()
-        return [dict(row) for row in rows]
+        rows = conn.execute(query, {"tags": list(tags), "limit": limit}).mappings().all()
+        return [_rowdict(row) for row in rows]
 
 
 def list_recent_entries(
@@ -329,7 +370,7 @@ def list_recent_entries(
 
     with engine.connect() as conn:
         rows = conn.execute(stmt).mappings().all()
-        return [dict(row) for row in rows]
+        return [_rowdict(row) for row in rows]
 
 
 def list_review_queue_with_sources(engine: Engine) -> list[dict]:
@@ -352,7 +393,7 @@ def list_review_queue_with_sources(engine: Engine) -> list[dict]:
         .order_by(t.c.created_at.desc())
     )
     with engine.connect() as conn:
-        entries = [dict(row) for row in conn.execute(stmt).mappings().all()]
+        entries = [_rowdict(row) for row in conn.execute(stmt).mappings().all()]
 
     if not entries:
         return []
@@ -364,7 +405,7 @@ def list_review_queue_with_sources(engine: Engine) -> list[dict]:
         .order_by(s.c.created_at.asc())
     )
     with engine.connect() as conn:
-        source_rows = [dict(row) for row in conn.execute(src_stmt).mappings().all()]
+        source_rows = [_rowdict(row) for row in conn.execute(src_stmt).mappings().all()]
 
     by_entry: dict[int, list[dict]] = {}
     for src in source_rows:
@@ -434,7 +475,7 @@ def get_entry_by_id(engine: Engine, entry_id: int) -> dict | None:
 
     with engine.connect() as conn:
         row = conn.execute(stmt).mappings().first()
-        return dict(row) if row else None
+        return _rowdict(row) if row else None
 
 
 def get_entries_by_ids(engine: Engine, ids: list[int]) -> list[dict]:
@@ -450,7 +491,7 @@ def get_entries_by_ids(engine: Engine, ids: list[int]) -> list[dict]:
     t = Entry.__table__
     stmt = t.select().where(t.c.id.in_(ids))
     with engine.connect() as conn:
-        return [dict(row) for row in conn.execute(stmt).mappings().all()]
+        return [_rowdict(row) for row in conn.execute(stmt).mappings().all()]
 
 
 def get_embeddings_by_ids(
@@ -465,15 +506,26 @@ def get_embeddings_by_ids(
     """
     if not ids:
         return []
+    from pbook.embeddings import vector_to_bytes
+
     t = Entry.__table__
     stmt = sa.select(t.c.id, t.c.embedding).where(t.c.id.in_(ids))
     with engine.connect() as conn:
-        return [(row[0], row[1]) for row in conn.execute(stmt).fetchall()]
+        return [
+            (row[0], vector_to_bytes(row[1]))
+            for row in conn.execute(stmt).fetchall()
+        ]
 
 
 def update_entry(engine: Engine, entry_id: int, updates: dict) -> None:
     """Update an entry by primary key with the given field values."""
     logger.info("Updating entry %d: %s", entry_id, list(updates.keys()))
+    # Embedding columns are pgvector vectors; decode any float32-bytes
+    # value to a list before binding.
+    if isinstance(updates.get("embedding"), (bytes, bytearray)):
+        from pbook.embeddings import bytes_to_vector
+
+        updates = {**updates, "embedding": bytes_to_vector(updates["embedding"])}
     t = Entry.__table__
     with engine.begin() as conn:
         conn.execute(t.update().where(t.c.id == entry_id).values(**updates))
@@ -494,7 +546,7 @@ def list_all_entries(engine: Engine) -> list[dict]:
 
     with engine.connect() as conn:
         rows = conn.execute(stmt).mappings().all()
-        return [dict(row) for row in rows]
+        return [_rowdict(row) for row in rows]
 
 
 def record_retrieval(engine: Engine, entry_ids: list[int]) -> None:
@@ -537,7 +589,7 @@ def check_duplicate(
 
     with engine.connect() as conn:
         rows = conn.execute(stmt).mappings().all()
-        results = [dict(row) for row in rows]
+        results = [_rowdict(row) for row in rows]
 
     if tags and results:
         tag_set = set(tags)
@@ -590,7 +642,7 @@ def list_ingested_sessions(
         )
     with engine.connect() as conn:
         rows = conn.execute(stmt).mappings().all()
-        return [dict(row) for row in rows]
+        return [_rowdict(row) for row in rows]
 
 
 def record_ingested_session_started(
@@ -606,12 +658,12 @@ def record_ingested_session_started(
     Upserts a row with status='running'. Re-submitting (e.g. ``--force``)
     overwrites the prior row's status and clears any previous error.
     """
-    from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
 
     logger.info("Recording ingested session %s as running", session_id)
     now = datetime.now(UTC)
     t = IngestedSession.__table__
-    stmt = sqlite_insert(t).values(
+    stmt = pg_insert(t).values(
         session_id=session_id,
         project_name=project_name,
         status=SESSION_STATUS_RUNNING,
@@ -654,7 +706,7 @@ def record_ingested_session(
     seeded as 'running' by ``record_ingested_session_started``, this
     flips it to completed and refreshes the counters.
     """
-    from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
 
     logger.info(
         "Recording ingested session %s: %d experiences, %d entries",
@@ -662,7 +714,7 @@ def record_ingested_session(
     )
     now = datetime.now(UTC)
     t = IngestedSession.__table__
-    stmt = sqlite_insert(t).values(
+    stmt = pg_insert(t).values(
         session_id=session_id,
         project_name=project_name,
         experiences_found=experiences_found,
@@ -699,12 +751,12 @@ def record_ingested_session_error(
     is only used when seeding a brand-new row (i.e. failure before
     ``record_ingested_session_started`` ran).
     """
-    from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
 
     logger.info("Recording ingested session %s as error: %s", session_id, error_message)
     now = datetime.now(UTC)
     t = IngestedSession.__table__
-    stmt = sqlite_insert(t).values(
+    stmt = pg_insert(t).values(
         session_id=session_id,
         project_name=project_name,
         status=SESSION_STATUS_ERROR,
@@ -735,27 +787,33 @@ def find_semantic_duplicates(
 ) -> list[dict]:
     """Find entries with high semantic similarity to the given embedding.
 
-    Calculates cosine similarity in Python using the ``embedding`` column.
-    Rejected entries are excluded by default.
+    Ranks candidates in Postgres using pgvector's cosine distance operator
+    (``<=>``), which is backed by the HNSW index on ``entries.embedding``.
+    Cosine similarity is ``1 - distance``. Rejected entries are excluded by
+    default.
     """
-    from pbook.embeddings import cosine_similarity
+    from pbook.embeddings import bytes_to_vector
 
+    qvec = bytes_to_vector(query_embedding)
     t = Entry.__table__
-    stmt = t.select().where(t.c.embedding.is_not(None))
+    distance = t.c.embedding.cosine_distance(qvec).label("distance")
+    stmt = t.select().add_columns(distance).where(t.c.embedding.is_not(None))
     if not include_rejected:
         stmt = stmt.where(t.c.rejected == False)  # noqa: E712
+    stmt = stmt.order_by(distance).limit(limit)
 
     with engine.connect() as conn:
         rows = conn.execute(stmt).mappings().all()
 
     results: list[dict] = []
     for row in rows:
-        sim = cosine_similarity(query_embedding, row["embedding"])
+        sim = 1.0 - float(row["distance"])
         if sim >= threshold:
-            results.append({**dict(row), "similarity": sim})
-
-    results.sort(key=lambda x: x["similarity"], reverse=True)
-    return results[:limit]
+            entry = _rowdict(row)
+            entry.pop("distance", None)
+            entry["similarity"] = sim
+            results.append(entry)
+    return results
 
 
 def add_entry_source(
@@ -771,22 +829,24 @@ def add_entry_source(
     """Insert an entry_sources row.
 
     Honors the UNIQUE (entry_id, session_id, experience_hash) constraint
-    via SQLite's ON CONFLICT DO NOTHING — a re-ingest of the same
+    via Postgres' ON CONFLICT DO NOTHING — a re-ingest of the same
     experience for the same session is a no-op.
 
     Returns the new row's id, or ``None`` if the insert was a no-op due
     to the conflict.
     """
-    from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+    from pbook.embeddings import bytes_to_vector
 
     t = EntrySource.__table__
-    stmt = sqlite_insert(t).values(
+    stmt = pg_insert(t).values(
         entry_id=entry_id,
         session_id=session_id,
         project_name=project_name,
         experience_hash=experience_hash,
         source_context=source_context,
-        source_context_embedding=source_context_embedding,
+        source_context_embedding=bytes_to_vector(source_context_embedding),
     ).on_conflict_do_nothing(
         index_elements=["entry_id", "session_id", "experience_hash"],
     )
@@ -805,7 +865,7 @@ def list_entry_sources_for_entry(engine: Engine, entry_id: int) -> list[dict]:
     stmt = t.select().where(t.c.entry_id == entry_id).order_by(t.c.created_at)
     with engine.connect() as conn:
         rows = conn.execute(stmt).mappings().all()
-        return [dict(row) for row in rows]
+        return [_rowdict(row) for row in rows]
 
 
 def find_similar_source_contexts(
@@ -818,25 +878,35 @@ def find_similar_source_contexts(
     """Find entry_sources rows for an entry whose source_context_embedding
     is within ``threshold`` cosine similarity of the query embedding.
 
-    Used to skip writing a new source row when the same justification
-    is already recorded for this entry.
+    Ranking uses pgvector's cosine distance operator (``<=>``); similarity
+    is ``1 - distance``. Used to skip writing a new source row when the
+    same justification is already recorded for this entry.
     """
-    from pbook.embeddings import cosine_similarity
+    from pbook.embeddings import bytes_to_vector
 
+    qvec = bytes_to_vector(query_embedding)
     t = EntrySource.__table__
-    stmt = t.select().where(
-        t.c.entry_id == entry_id,
-        t.c.source_context_embedding.is_not(None),
+    distance = t.c.source_context_embedding.cosine_distance(qvec).label("distance")
+    stmt = (
+        t.select()
+        .add_columns(distance)
+        .where(
+            t.c.entry_id == entry_id,
+            t.c.source_context_embedding.is_not(None),
+        )
+        .order_by(distance)
     )
     with engine.connect() as conn:
         rows = conn.execute(stmt).mappings().all()
 
     results: list[dict] = []
     for row in rows:
-        sim = cosine_similarity(query_embedding, row["source_context_embedding"])
+        sim = 1.0 - float(row["distance"])
         if sim >= threshold:
-            results.append({**dict(row), "similarity": sim})
-    results.sort(key=lambda r: r["similarity"], reverse=True)
+            src = _rowdict(row)
+            src.pop("distance", None)
+            src["similarity"] = sim
+            results.append(src)
     return results
 
 
@@ -898,19 +968,30 @@ def semantic_search(
     *,
     limit: int = 10,
 ) -> list[dict]:
-    """Rank all entries by semantic similarity to the query embedding."""
-    from pbook.embeddings import cosine_similarity
+    """Rank all entries by semantic similarity to the query embedding.
 
+    Ordering is computed in Postgres via pgvector's cosine distance
+    operator (``<=>``), backed by the HNSW index on ``entries.embedding``.
+    """
+    from pbook.embeddings import bytes_to_vector
+
+    qvec = bytes_to_vector(query_embedding)
     t = Entry.__table__
-    stmt = t.select().where(t.c.embedding.is_not(None))
+    distance = t.c.embedding.cosine_distance(qvec).label("distance")
+    stmt = (
+        t.select()
+        .add_columns(distance)
+        .where(t.c.embedding.is_not(None))
+        .order_by(distance)
+        .limit(limit)
+    )
 
     with engine.connect() as conn:
         rows = conn.execute(stmt).mappings().all()
 
-    scored: list[tuple[float, dict]] = []
+    results: list[dict] = []
     for row in rows:
-        sim = cosine_similarity(query_embedding, row["embedding"])
-        scored.append((sim, dict(row)))
-
-    scored.sort(key=lambda x: x[0], reverse=True)
-    return [row for _sim, row in scored[:limit]]
+        entry = _rowdict(row)
+        entry.pop("distance", None)
+        results.append(entry)
+    return results

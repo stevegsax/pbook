@@ -1,6 +1,6 @@
 # pbook — Knowledge Playbook Service
 
-pbook is a knowledge management service that stores, retrieves, and curates actionable lessons for LLM-assisted workflows. It runs as an independent Temporal worker with its own SQLite database and CLI.
+pbook is a knowledge management service that stores, retrieves, and curates actionable lessons for LLM-assisted workflows. It runs as an independent Temporal worker with its own PostgreSQL database (pgvector) and CLI.
 
 ## What It Does
 
@@ -27,13 +27,13 @@ Entries must be minimal (avoid over-constraining future decisions) and accurate 
 └──────────────┘     └──────┬───────┘     └──────────────┘
                             │
                      ┌──────▼───────┐
-                     │  SQLite DB   │
-                     │  (pbook.db)  │
+                     │ PostgreSQL   │
+                     │ (+ pgvector) │
                      └──────────────┘
 ```
 
 - **Temporal task queue**: `pbook-task-queue` (separate from any client's queue)
-- **Database**: SQLite with WAL mode, Alembic migrations, XDG-compliant path
+- **Database**: PostgreSQL with the pgvector extension (e.g. Supabase), Alembic migrations, configured via `PBOOK_DATABASE_URL`
 - **LLM provider**: Uses `sax-llm` for Anthropic API calls (extraction and review only). See the sax-llm project for provider documentation.
 - **CLI**: `pbook` command with subcommands for all operations
 

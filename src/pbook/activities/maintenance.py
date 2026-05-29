@@ -138,31 +138,31 @@ def group_similar_entries(
 @activity.defn
 async def fetch_all_entries_for_maintenance() -> list[dict]:
     """Fetch all entries from the store for maintenance analysis."""
-    from pbook.store import get_db_path, get_engine, list_all_entries, run_migrations
+    from pbook.store import get_database_url, get_engine, list_all_entries, run_migrations
 
-    db_path = get_db_path()
-    if db_path is None or not db_path.exists():
+    db_url = get_database_url()
+    if db_url is None:
         return []
 
-    run_migrations(db_path)
-    engine = get_engine(db_path)
+    run_migrations(db_url)
+    engine = get_engine(db_url)
     return list_all_entries(engine)
 
 
 @activity.defn
 async def prune_entries(entry_ids: list[int]) -> int:
     """Delete the given entries from the store."""
-    from pbook.store import delete_entry, get_db_path, get_engine, run_migrations
+    from pbook.store import delete_entry, get_database_url, get_engine, run_migrations
 
     if not entry_ids:
         return 0
 
-    db_path = get_db_path()
-    if db_path is None:
+    db_url = get_database_url()
+    if db_url is None:
         return 0
 
-    run_migrations(db_path)
-    engine = get_engine(db_path)
+    run_migrations(db_url)
+    engine = get_engine(db_url)
 
     for entry_id in entry_ids:
         delete_entry(engine, entry_id)
@@ -190,7 +190,7 @@ async def save_consolidated_entry(input_json: str) -> int:
     from pbook.models import EntryType, PlaybookEntry
     from pbook.store import (
         build_entry_dict,
-        get_db_path,
+        get_database_url,
         get_engine,
         reparent_entry_sources,
         run_migrations,
@@ -201,12 +201,12 @@ async def save_consolidated_entry(input_json: str) -> int:
     merged = data["merged_entry"]
     cluster_ids = list(data.get("cluster_ids", []))
 
-    db_path = get_db_path()
-    if db_path is None:
+    db_url = get_database_url()
+    if db_url is None:
         return 0
 
-    run_migrations(db_path)
-    engine = get_engine(db_path)
+    run_migrations(db_url)
+    engine = get_engine(db_url)
 
     raw_embedding = merged.get("embedding") or ""
     embedding = base64.b64decode(raw_embedding) if raw_embedding else None
