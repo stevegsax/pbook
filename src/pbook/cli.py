@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 
 from pbook.models import PlaybookEntry
 from pbook.tags import validate_tags
+from pbook.temporal_client import connect_temporal
 
 logger = logging.getLogger(__name__)
 
@@ -51,13 +52,8 @@ def _execute_workflow(
     the worker isn't running, the connect/submit will fail and the
     caller surfaces the error.
     """
-    from temporalio.client import Client
-    from temporalio.contrib.pydantic import pydantic_data_converter
-
     async def _submit():
-        client = await Client.connect(
-            temporal_address, data_converter=pydantic_data_converter,
-        )
+        client = await connect_temporal(temporal_address)
         return await client.execute_workflow(
             workflow_fn,
             arg,
@@ -180,7 +176,7 @@ def main(verbose: bool) -> None:
 
 @main.command()
 @click.option(
-    "--temporal-address", default="localhost:7233",
+    "--temporal-address", default="localhost:7233", envvar="PBOOK_TEMPORAL_ADDRESS",
     help="Temporal server address.",
 )
 def worker(temporal_address: str) -> None:
@@ -462,7 +458,7 @@ def check_duplicate_cmd(title: str, tag: tuple[str, ...]) -> None:
     help="JSON file with PushExperienceInput data.",
 )
 @click.option(
-    "--temporal-address", default="localhost:7233",
+    "--temporal-address", default="localhost:7233", envvar="PBOOK_TEMPORAL_ADDRESS",
     help="Temporal server address.",
 )
 def push(file_path: Path, temporal_address: str) -> None:
@@ -488,15 +484,10 @@ def push(file_path: Path, temporal_address: str) -> None:
         sys.exit(1)
 
     async def _submit():
-        from temporalio.client import Client
-        from temporalio.contrib.pydantic import pydantic_data_converter
-
         from pbook.worker import PBOOK_TASK_QUEUE
         from pbook.workflows.extraction import ExtractionWorkflow
 
-        client = await Client.connect(
-            temporal_address, data_converter=pydantic_data_converter,
-        )
+        client = await connect_temporal(temporal_address)
         result = await client.execute_workflow(
             ExtractionWorkflow.run,
             json.dumps({"experiences": experiences, "project": project}),
@@ -539,7 +530,7 @@ def push(file_path: Path, temporal_address: str) -> None:
     help="Include entries flagged needs_review (default: only approved entries).",
 )
 @click.option(
-    "--temporal-address", default="localhost:7233",
+    "--temporal-address", default="localhost:7233", envvar="PBOOK_TEMPORAL_ADDRESS",
     help="Temporal server address.",
 )
 @click.option("--json", "output_json", is_flag=True, help="Machine-readable JSON output.")
@@ -572,16 +563,11 @@ def search(
         )
 
     async def _submit():
-        from temporalio.client import Client
-        from temporalio.contrib.pydantic import pydantic_data_converter
-
         from pbook.models import RetrievalInput, RetrievalMode
         from pbook.worker import PBOOK_TASK_QUEUE
         from pbook.workflows.retrieval import RetrievalWorkflow
 
-        client = await Client.connect(
-            temporal_address, data_converter=pydantic_data_converter,
-        )
+        client = await connect_temporal(temporal_address)
         retrieval_mode = RetrievalMode(mode)
         return await client.execute_workflow(
             RetrievalWorkflow.run,
@@ -965,7 +951,7 @@ def prune(
 @click.option("--dry-run", is_flag=True, help="Show sessions/stats without ingesting.")
 @click.option("--force", is_flag=True, help="Reprocess already-ingested sessions.")
 @click.option(
-    "--temporal-address", default="localhost:7233",
+    "--temporal-address", default="localhost:7233", envvar="PBOOK_TEMPORAL_ADDRESS",
     help="Temporal server address.",
 )
 def ingest(
@@ -1100,12 +1086,7 @@ def ingest(
     workflow_id = f"pbook-batch-ingest-{int(time.time())}"
 
     async def _submit() -> str:
-        from temporalio.client import Client
-        from temporalio.contrib.pydantic import pydantic_data_converter
-
-        client = await Client.connect(
-            temporal_address, data_converter=pydantic_data_converter,
-        )
+        client = await connect_temporal(temporal_address)
         handle = await client.start_workflow(
             "BatchIngestionWorkflow",
             json.dumps({"sessions": session_dicts}),

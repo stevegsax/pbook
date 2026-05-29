@@ -9,8 +9,6 @@ import asyncio
 import logging
 from datetime import timedelta
 
-from temporalio.client import Client
-from temporalio.contrib.pydantic import pydantic_data_converter
 from temporalio.worker import Worker
 from temporalio.worker.workflow_sandbox import (
     SandboxedWorkflowRunner,
@@ -59,6 +57,7 @@ from pbook.activities.review import (
     find_duplicates,
     validate_entry,
 )
+from pbook.temporal_client import connect_temporal
 from pbook.workflow_steps import (
     llm_chat,
     llm_embed,
@@ -134,7 +133,7 @@ async def run_worker(address: str = "localhost:7233") -> None:
     # models (RetrievalInput, RetrievalResult, PlaybookEntry, etc.) round-trip
     # cleanly without the legacy-converter UserWarning at every workflow
     # submission.
-    client = await Client.connect(address, data_converter=pydantic_data_converter)
+    client = await connect_temporal(address)
 
     # Pass pydantic through the workflow sandbox. The sandbox is created
     # fresh per workflow run; without passthrough, pydantic_core gets
